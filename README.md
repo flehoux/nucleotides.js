@@ -41,13 +41,20 @@ var Person = defineModel("Person")
     parentsNas: [String],
     sex: {require: ["M", "F"]}
   })
-  .method("fullName", function() { return this.firstname + " " + this.lastname; })
+  .define("fullname", function() { return this.firstname + " " + this.lastname; })
   .mixin("Genealogy", {parentKey: "nas", childKey: "parentsNas"})
   .mixin("LocalStorage", {key: "nas", prefix: "people"})
+
+// Global event handlers
+
+Person.on('new', function () { console.log("New instance of Person created!") });
+Person.on('change', function () { console.log("One of the instances of Person changed!") });
 
 var john = Person.create({nas: "555", firstname: "John", lastname: "Smith", birthdate: new Date(), sex: "R"});
 var mary = Person.create({nas: "666", firstname: "Mary", lastname: "Smith", birthdate: new Date(), sex: "F", parentsNas: ["555"]});
 var peter = Person.create({nas: "777", firstname: "Peter", lastname: "Smith", birthdate: new Date(), sex: "M", parentsNas: ["555"]});
+
+// Validation
 
 john.$isValid
 // ==> false
@@ -55,9 +62,20 @@ john.$isValid
 john.$errors
 // ==> { "sex": "invalid" }
 
+// Using mixin-defined properties
+
 mary.parents
 // ==> [Person{nas: "555", firstname: "John", ...}]
 
 john.children
 // ==> [Person{nas: "666", ...}, Person{nas: "777", ...}]
+
+// Object lifecycle hooks
+
+john.on('change', function (difference) { console.log(this.fullname + " changed " + Objects.keys(difference)[0]) });
+
+john.firstname = "Johnny"
+// ==> One of the instances of Person changed!
+// ==> Johnny Smith changed firstname
+
 ```
