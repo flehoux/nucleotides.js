@@ -6,64 +6,71 @@ Agnostic and extensible organization of state
 
 ---
 
+## Quick overview
+
 ```javascript
+import {Mixin, Model} from "nucleotides";
 
-import {defineMixin, defineModel} from "nucleotides";
-
-defineMixin("Genealogy")
-  .derive("parents", function (params) {
+var GenealogyMixin = new Mixin("Genealogy")
+  .derive("parents", function (mixin) {
     // implement getting the parents of `this`
   })
-  .derive("children", function (params) {
+  .derive("children", function (mixin) {
     // implement getting the children of `this`
   })
-  .derive("siblings", {lazy: true}, function (params) {
+  .derive("siblings", {lazy: true}, function (mixin) {
     // implement getting the siblings of `this`
   });
 
-defineMixin("LocalStorage")
-  .$findOne(function(params, searchArgs, promise) {
+var LocalStorageMixin = new Mixin("LocalStorage")
+  .findOne(function(mixin, searchArgs, promise) {
     // Implement a getter for finding an item from the main key
   })
-  .$findMany(function(params, searchArgs, promise) {
+  .findMany(function(mixin, searchArgs, promise) {
     // Implement a getter for finding items from other criterias
   })
-  .$store(function(difference, promise) {
+  .store(function(mixin, difference, promise) {
     // Implement how to store a object (as `this`), optionally using the difference
   })
 
-var Person = defineModel("Person")
+var Person = new Model("Person")
   .fields({
     nas: {require: String},
     firstname: {require: String},
     lastname: {require: String},
     birthdate: Date,
     parentsNas: [String],
-    sex: {require: ["M", "F"]}
+    gender: {require: ["M", "F"]}
   })
-  .define("fullname", function() { return this.firstname + " " + this.lastname; })
-  .mixin("Genealogy", {parentKey: "nas", childKey: "parentsNas"})
-  .mixin("LocalStorage", {key: "nas", prefix: "people"})
+  .derive("fullname", function() { return this.firstname + " " + this.lastname; })
+  .use(new GenealogyMixin({parentKey: "nas", childKey: "parentsNas"}))
+  .use(new LocalStorageMixin({key: "nas", prefix: "people"}))
+```
 
-// Global event handlers
+### Global event handlers
 
+```javascript
 Person.on('new', function () { console.log("New instance of Person created!") });
 Person.on('change', function () { console.log("One of the instances of Person changed!") });
 
-var john = Person.create({nas: "555", firstname: "John", lastname: "Smith", birthdate: new Date(), sex: "R"});
-var mary = Person.create({nas: "666", firstname: "Mary", lastname: "Smith", birthdate: new Date(), sex: "F", parentsNas: ["555"]});
-var peter = Person.create({nas: "777", firstname: "Peter", lastname: "Smith", birthdate: new Date(), sex: "M", parentsNas: ["555"]});
+var john = Person.create({nas: "555", firstname: "John", lastname: "Smith", birthdate: new Date(), gender: "R"});
+var mary = Person.create({nas: "666", firstname: "Mary", lastname: "Smith", birthdate: new Date(), gender: "F", parentsNas: ["555"]});
+var peter = Person.create({nas: "777", firstname: "Peter", lastname: "Smith", birthdate: new Date(), gender: "M", parentsNas: ["555"]});
+```
 
-// Validation
+### Validation
 
+```javascript
 john.$isValid
 // ==> false
 
 john.$errors
-// ==> { "sex": "invalid" }
+// ==> {"gender": "invalid"}
+```
 
-// Using mixin-defined properties
+### Using mixin-defined properties
 
+```javascript
 mary.parents
 // ==> [Person{nas: "555", firstname: "John", ...}]
 
@@ -72,10 +79,46 @@ john.children
 
 // Object lifecycle hooks
 
-john.on('change', function (difference) { console.log(this.fullname + " changed " + Objects.keys(difference)[0]) });
+john.$on('change', function (difference) { console.log(this.fullname + " changed " + Objects.keys(difference)[0]) });
 
 john.firstname = "Johnny"
 // ==> One of the instances of Person changed!
 // ==> Johnny Smith changed firstname
-
 ```
+
+## Testing
+
+With node.js installed
+
+```javascript
+$ npm i --dev
+$ npm test
+```
+
+## Contributing
+
+If you want to improve the nucleotides library, add functionality or improve the docs please feel free to submit a PR. Ensure you run and adapt tests if you do so.
+
+## License
+
+MIT License
+
+Copyright (c) 2017 Mathieu D'Amours
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
