@@ -100,4 +100,6 @@ class DerivedProperty {
   }
 }
 
+DerivedProperty.DefinitionException = DerivedDefinitionException
+
 module.exports = DerivedProperty

@@ -147,4 +147,6 @@ Field.shorthand = function (name, options) {
   }
 }
 
+Field.DefinitionException = FieldDefinitionException
+
 module.exports = Field
