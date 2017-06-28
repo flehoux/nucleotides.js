@@ -93,19 +93,35 @@ class Field {
     }
   }
 
+  maybeUpdate (object, value) {
+    let realValue = this.generator(value)
+    if (object.$data[this.name] !== realValue) {
+      object.$data[this.name] = realValue
+      return true
+    } else {
+      return false
+    }
+  }
+
   augmentModel (klass) {
     let field = this
+
     Object.defineProperty(klass.prototype, this.name, {
       set: function (value) {
-        let realValue = field.generator(value)
-        if (this.$data[field.name] !== realValue) {
-          this.$data[field.name] = realValue
-          this.$emit('change', { [field.name]: realValue })
-          klass.$emit('change', this, { [field.name]: realValue })
+        if (field.maybeUpdate(this, value)) {
+          let difference = { [field.name]: this[field.name] }
+          this.$emit('change', difference)
+          klass.$emit('change', this, difference)
         }
       },
       get: function () {
         return this.$data[field.name]
+      }
+    })
+
+    klass.$on('new', function (object) {
+      if (object.$data[field.name] == null) {
+        field.initializeIn(object)
       }
     })
   }
@@ -122,10 +138,9 @@ class Field {
 }
 
 Field.shorthand = function (name, options) {
-  if (options.hasOwnProperty('require')) {
-    let type = options.require
-    delete options.require
-    options.required = true
+  if (options.hasOwnProperty('type')) {
+    let type = options.type
+    delete options.type
     return new Field(name, type, options)
   } else {
     return new Field(name, options)

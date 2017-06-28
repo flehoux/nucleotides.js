@@ -1,4 +1,4 @@
-// from https://github.com/bevacqua/contra/blob/master/emitter.js
+// Extracted from https://github.com/bevacqua/contra/blob/master/emitter.js
 
 var tick = (function () {
   var si = typeof setImmediate === 'function'

@@ -21,6 +21,22 @@ class DerivedProperty {
     this.options = options
     this.name = name
     this.storage = Symbol('storage')
+
+    this.prepareDefaults()
+  }
+
+  prepareDefaults () {
+    if (this.options == null) {
+      this.options = {}
+    }
+
+    if (this.options.cached == null) {
+      this.options.cached = false
+    }
+
+    if (this.options.eager == null) {
+      this.options.eager = false
+    }
   }
 
   cache (object) {
@@ -47,10 +63,12 @@ class DerivedProperty {
 
       Object.defineProperty(klass.prototype, derived.name, {
         get: function () {
-          if (derived.options.eager === false) {
-            derived.cache(this)
-          }
-          if (this.hasOwnProperty([derived.storage])) {
+          if (this.hasOwnProperty(derived.storage)) {
+            return this[derived.storage]
+          } else {
+            if (derived.options.eager === false) {
+              derived.cache(this)
+            }
             return this[derived.storage]
           }
         }
@@ -58,15 +76,24 @@ class DerivedProperty {
 
       if (this.options.cached === true) {
         klass.$on('change', function (object) {
-          if (this.options.eager === true) {
-            derived.cache(this)
+          if (derived.options.eager === true) {
+            derived.cache(object)
           } else {
-            derived.clearCache(this)
+            derived.clearCache(object)
           }
         })
-      } else {
+      } else if (this.options.cached && this.options.cached.length > 0) {
         klass.$on('change', function (object, difference) {
-
+          for (let fieldName of derived.options.cached) {
+            if (fieldName in difference) {
+              if (derived.options.eager === true) {
+                derived.cache(object)
+              } else {
+                derived.clearCache(object)
+              }
+              return;
+            }
+          }
         })
       }
     }

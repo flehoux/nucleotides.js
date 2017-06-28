@@ -5,18 +5,13 @@ const __fields = Symbol('fields')
 const __data = Symbol('data')
 
 const Field = require('./field')
+const DerivedProperty = require('./derived')
 const emitter = require('./emitter')
 
 module.exports = function Model (name) {
   const klass = function (...args) {
     this[__data] = {}
     klass[__constructor].apply(this, args)
-    for (let fieldName in klass[__fields]) {
-      if (this.$data[fieldName] == null) {
-        let field = klass[__fields][fieldName]
-        field.initializeIn(this)
-      }
-    }
     klass.$emit("new", this)
   }
 
@@ -30,8 +25,9 @@ module.exports = function Model (name) {
     if (data == null) return
 
     for (let fieldName in klass[__fields]) {
+      let field = klass[__fields][fieldName]
       if (data[fieldName] != null) {
-        this[fieldName] = data[fieldName]
+        field.maybeUpdate(this, data[fieldName])
       }
     }
   }
@@ -65,21 +61,26 @@ module.exports = function Model (name) {
   }
 
   klass.derive = function (name, options, getter) {
-    if (typeof options == 'function') {
-      getter = options
-      options = {}
-    }
+    let derived = new DerivedProperty(name, options, getter)
+    derived.augmentModel(klass)
+    return klass
+  }
 
-    if (getter == null) {
-      throw new Model.DefinitionError(klass, 'derive', `No getter function provided for derived property ${name}`)
+  klass.prototype.update = function (data) {
+    let difference = {}
+    for (let fieldName in data) {
+      if (fieldName in klass.fields()) {
+        let field = klass.fields()[fieldName]
+        if (field.maybeUpdate(this, data[fieldName])) {
+          difference[fieldName] = this[fieldName]
+        }
+      }
+    }
+    if (Object.keys(difference).length > 0) {
+      this.$emit('change', difference)
+      klass.$emit('change', this, difference)
     }
   }
 
   return klass
-}
-
-Model.DefinitionError = function (klass, property, message) {
-  this.model = klass
-  this.property = property
-  this.message = message
 }
