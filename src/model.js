@@ -80,7 +80,7 @@ const Model = function Model (name) {
     return klass
   }
 
-  klass.mixin = function (mixin) {
+  klass.use = function (mixin) {
     var alreadyMixedIn = klass.mixins.some(function (other) {
       return other.constructor.uniqueKey() == mixin.constructor.uniqueKey()
     })

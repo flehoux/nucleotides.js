@@ -50,7 +50,7 @@ module.exports = function Mixin (name) {
     return klass
   }
 
-  klass.mixin = function (mixin) {
+  klass.use = function (mixin) {
     klass[__used_mixins].push(mixin)
     return klass
   }
@@ -72,9 +72,9 @@ module.exports = function Mixin (name) {
 
     for (let subMixin of klass[__used_mixins]) {
       if (typeof subMixin === 'function') {
-        model.mixin(subMixin.call(this))
+        model.use(subMixin.call(this))
       } else {
-        model.mixin(subMixin)
+        model.use(subMixin)
       }
     }
   }

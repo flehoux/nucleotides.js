@@ -14,7 +14,7 @@ describe("A Model modified using a mixin that defines derived properties", funct
         lastName: String,
         birthdate: Date
       })
-      .mixin(new NameMixin({foo: "bar"}))
+      .use(new NameMixin({foo: "bar"}))
 
   it("should be able to derive dynamic properties just-in-time", function () {
     var person = new Person({
@@ -50,7 +50,7 @@ describe("A Mixin being used in a Model", function () {
     MixinA.$on('use', spy)
     mixin.$on('use', spy)
 
-    const ModelA = Model("A").mixin(mixin)
+    const ModelA = Model("A").use(mixin)
 
     expect(spy).toHaveBeenCalled()
     expect(spy.calls.count()).toEqual(2)
@@ -71,8 +71,8 @@ describe("A Mixin being used in a Model", function () {
 
     var createModel = function () {
       var ModelA = Model("A")
-        .mixin(mixin)
-        .mixin(other_mixin)
+        .use(mixin)
+        .use(other_mixin)
     }
 
     expect(createModel).toThrow()
@@ -90,7 +90,7 @@ describe("A Mixin used in another mixin", function () {
       })
 
   var IntermediateMixin = Mixin("Middleman")
-      .mixin(new NameMixin({foo: "bar"}))
+      .use(new NameMixin({foo: "bar"}))
 
   var Person = Model("Person")
       .fields({
@@ -98,7 +98,7 @@ describe("A Mixin used in another mixin", function () {
         lastName: String,
         birthdate: Date
       })
-      .mixin(new IntermediateMixin)
+      .use(new IntermediateMixin)
 
   it("should be able to derive dynamic properties just-in-time", function () {
     var person = new Person({
@@ -133,7 +133,7 @@ describe("A Mixin used in another mixin dynamically", function () {
       })
 
   var IntermediateMixin = Mixin("Middleman")
-      .mixin(function () {
+      .use(function () {
         return new NameMixin({foo: this.param})
       })
 
@@ -143,7 +143,7 @@ describe("A Mixin used in another mixin dynamically", function () {
         lastName: String,
         birthdate: Date
       })
-      .mixin(new IntermediateMixin({param: "bar"}))
+      .use(new IntermediateMixin({param: "bar"}))
 
   it("should be able to derive dynamic properties just-in-time", function () {
     var person = new Person({
