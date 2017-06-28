@@ -64,5 +64,22 @@ module.exports = function Model (name) {
     }
   }
 
+  klass.derive = function (name, options, getter) {
+    if (typeof options == 'function') {
+      getter = options
+      options = {}
+    }
+
+    if (getter == null) {
+      throw new Model.DefinitionError(klass, 'derive', `No getter function provided for derived property ${name}`)
+    }
+  }
+
   return klass
+}
+
+Model.DefinitionError = function (klass, property, message) {
+  this.model = klass
+  this.property = property
+  this.message = message
 }

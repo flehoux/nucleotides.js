@@ -43,6 +43,22 @@ class Field {
     return this.baseTypes.indexOf(type) >= 0
   }
 
+  set baseType (typeClass) {
+    if (this.hasOwnProperty(__type)) {
+      throw new FieldDefinitionException('baseType', `Base type for field ${this.name} has already been set`, typeClass)
+    } else {
+      this[__type] = typeClass
+    }
+  }
+
+  get baseType () {
+    return this[__type]
+  }
+
+  get generator () {
+    return this[__generator]
+  }
+
   parseOptions (options) {
     const {require, initial, accept} = options
     Object.defineProperty(this, 'require', {value: require})
@@ -77,22 +93,6 @@ class Field {
     }
   }
 
-  set baseType (typeClass) {
-    if (this.hasOwnProperty(__type)) {
-      throw new FieldDefinitionException('baseType', `Base type for field ${this.name} has already been set`, typeClass)
-    } else {
-      this[__type] = typeClass
-    }
-  }
-
-  get baseType () {
-    return this[__type]
-  }
-
-  get generator () {
-    return this[__generator]
-  }
-
   augmentModel (klass) {
     let field = this
     Object.defineProperty(klass.prototype, this.name, {
@@ -100,8 +100,8 @@ class Field {
         let realValue = field.generator(value)
         if (this.$data[field.name] !== realValue) {
           this.$data[field.name] = realValue
-          this.$emit('change', field.name, realValue)
-          klass.$emit('change', this, field.name, realValue)
+          this.$emit('change', { [field.name]: realValue })
+          klass.$emit('change', this, { [field.name]: realValue })
         }
       },
       get: function () {
