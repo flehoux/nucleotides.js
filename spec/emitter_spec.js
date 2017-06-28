@@ -1,5 +1,5 @@
 describe("A Model, as an event emitter", function () {
-  var Model = require('../src/model')
+  const { Model } = require('..')
 
   var Person = Model("Person")
       .fields({

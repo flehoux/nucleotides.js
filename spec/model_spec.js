@@ -1,5 +1,6 @@
 describe("A Model with simple fields and derived properties", function () {
-  var Model = require('../src/model')
+  const { Model } = require('..')
+
   var Person = Model("Person")
       .fields({
         firstName: String,

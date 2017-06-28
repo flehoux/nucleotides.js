@@ -1,5 +1,5 @@
 describe("A Model with cached derived properties", function () {
-  var Model = require('../src/model')
+  const { Model } = require('..')
 
   var spies = {
     lazy: jasmine.createSpy().and.returnValue("lazily evaluated"),
