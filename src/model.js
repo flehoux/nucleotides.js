@@ -1,14 +1,25 @@
-'use strict';
+'use strict'
 
 const __constructor = Symbol('construct')
 const __fields = Symbol('fields')
 const __data = Symbol('data')
+const __find_one = Symbol('find_one')
+const __find_many = Symbol('find_many')
+const __store = Symbol('store')
+const __mixins = Symbol('mixins')
 
 const Field = require('./field')
+const Mixin = require('./mixin')
 const DerivedProperty = require('./derived')
 const emitter = require('./emitter')
 
-module.exports = function Model (name) {
+function ModelDefinitionException (code, message, value) {
+  this.code = code
+  this.message = message
+  this.value = value
+}
+
+const Model = function Model (name) {
   const klass = function (...args) {
     this[__data] = {}
     klass[__constructor].apply(this, args)
@@ -16,6 +27,8 @@ module.exports = function Model (name) {
   }
 
   Object.defineProperty(klass, 'name', {value: name, __proto__: null})
+  Object.defineProperty(klass, 'mixins', {get: function () { return this[__mixins] } })
+
   Object.defineProperty(klass.prototype, '$data', {get: function () { return this[__data] }})
 
   emitter(klass)
@@ -32,6 +45,7 @@ module.exports = function Model (name) {
     }
   }
   klass[__fields] = {}
+  klass[__mixins] = []
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
@@ -66,6 +80,23 @@ module.exports = function Model (name) {
     return klass
   }
 
+  klass.mixin = function (mixin) {
+    var alreadyMixedIn = klass.mixins.some(function (other) {
+      return other.constructor.uniqueKey() == mixin.constructor.uniqueKey()
+    })
+
+    if (alreadyMixedIn) {
+      throw new ModelDefinitionException('conflict', `Mixin ${mixin.constructor.name} is already being used in ${this.name}`, mixin)
+    } else {
+      klass.mixins.push(mixin)
+      mixin.augmentModel(this)
+      mixin.constructor.$emit('use', mixin, klass)
+      mixin.$emit('use', klass)
+    }
+
+    return klass
+  }
+
   klass.prototype.update = function (data) {
     let difference = {}
     for (let fieldName in data) {
@@ -84,3 +115,7 @@ module.exports = function Model (name) {
 
   return klass
 }
+
+Model.DefinitionException = ModelDefinitionException
+
+module.exports = Model

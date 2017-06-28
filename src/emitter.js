@@ -1,4 +1,5 @@
 // Extracted from https://github.com/bevacqua/contra/blob/master/emitter.js
+'use strict'
 
 var tick = (function () {
   var si = typeof setImmediate === 'function'
