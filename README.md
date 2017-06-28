@@ -11,7 +11,7 @@ Agnostic and extensible model framework
 ```javascript
 import {Mixin, Model} from "nucleotides";
 
-var GenealogyMixin = new Mixin("Genealogy")
+var GenealogyMixin = Mixin("Genealogy")
   .derive("parents", function (mixin) {
     // implement getting the parents of `this`
   })
@@ -22,7 +22,7 @@ var GenealogyMixin = new Mixin("Genealogy")
     // implement getting the siblings of `this`
   });
 
-var LocalStorageMixin = new Mixin("LocalStorage")
+var LocalStorageMixin = Mixin("LocalStorage")
   .findOne(function(mixin, searchArgs, promise) {
     // Implement a getter for finding an item from the main key
   })
@@ -33,14 +33,14 @@ var LocalStorageMixin = new Mixin("LocalStorage")
     // Implement how to store a object (as `this`), optionally using the difference
   })
 
-var Person = new Model("Person")
+var Person = Model("Person")
   .fields({
     nas: {require: String},
     firstname: {require: String},
     lastname: {require: String},
     birthdate: Date,
     parentsNas: [String],
-    gender: {require: ["M", "F"]}
+    gender: {require: String, accept: ["M", "F"]}
   })
   .derive("fullname", function() { return this.firstname + " " + this.lastname; })
   .use(new GenealogyMixin({parentKey: "nas", childKey: "parentsNas"}))
