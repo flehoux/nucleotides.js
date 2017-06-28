@@ -22,7 +22,11 @@ function generatorForBaseType (type) {
         return new Date(value)
       } else if (typeof value === 'object') {
         const { year, month, date, hours, minutes, seconds, milliseconds } = value
-        return new Date(year, month, date, hours, minutes, seconds, milliseconds)
+        if (value.utc === true) {
+          return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds))
+        } else {
+          return new Date(year, month, date, hours, minutes, seconds, milliseconds)
+        }
       }
     }
   }

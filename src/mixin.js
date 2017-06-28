@@ -32,6 +32,7 @@ module.exports = function Mixin (name) {
       }
     }
   }
+
   klass[__derived_properties] = []
   klass[__find_one] = []
   klass[__find_many] = []
