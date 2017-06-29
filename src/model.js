@@ -1,17 +1,14 @@
 'use strict'
 
 const $$constructor = Symbol('construct')
-const $$fields = Symbol('fields')
+const $$attributes = Symbol('attributes')
 const $$data = Symbol('data')
-const $$findOne = Symbol('find_one')
-const $$findMany = Symbol('find_many')
-const $$store = Symbol('store')
 const $$mixins = Symbol('mixins')
-const $$methods = Symbol('methods')
+const $$isModel = Symbol('isModel')
 
-const Field = require('./field')
+const Attribute = require('./attribute')
 const DerivedProperty = require('./derived')
-const emitter = require('./emitter')
+const makeEmitter = require('./emitter')
 
 function ModelDefinitionException (code, message, value) {
   this.code = code
@@ -26,25 +23,39 @@ const Model = function Model (name) {
     klass.$emit('new', this)
   }
 
-  Object.defineProperty(klass, 'name', {value: name, __proto__: null})
-  Object.defineProperty(klass, 'mixins', { get: function () { return this[$$mixins] } })
-  Object.defineProperty(klass.prototype, '$data', {get: function () { return this[$$data] }})
+  klass[$$attributes] = {}
+  klass[$$mixins] = []
+  klass[$$isModel] = true
 
-  emitter(klass)
-  emitter(klass.prototype)
+  Object.defineProperty(klass, 'name', {
+    value: name,
+    __proto__: null
+  })
+  Object.defineProperty(klass, 'mixins', {
+    value: klass[$$mixins],
+    __proto__: null
+  })
+  Object.defineProperties(klass.prototype, {
+    $data: {
+      get: function () {
+        return this[$$data]
+      }
+    }
+  })
+
+  makeEmitter(klass)
+  makeEmitter(klass.prototype)
 
   klass[$$constructor] = function (data) {
     if (data == null) return
 
-    for (let fieldName in klass[$$fields]) {
-      let field = klass[$$fields][fieldName]
-      if (data[fieldName] != null) {
-        field.maybeUpdate(this, data[fieldName])
+    for (let attributeName in klass[$$attributes]) {
+      let attribute = klass[$$attributes][attributeName]
+      if (data[attributeName] != null) {
+        attribute.maybeUpdate(this, data[attributeName])
       }
     }
   }
-  klass[$$fields] = {}
-  klass[$$mixins] = []
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
@@ -53,21 +64,21 @@ const Model = function Model (name) {
     return klass
   }
 
-  klass.field = function (name, type, options) {
-    const newField = new Field(name, type, options)
-    newField.augmentModel(klass)
-    klass[$$fields][name] = newField
+  klass.attribute = function (name, type, options) {
+    const newAttribute = new Attribute(name, type, options)
+    newAttribute.augmentModel(klass)
+    klass[$$attributes][name] = newAttribute
     return klass
   }
 
-  klass.fields = function (fields) {
-    if (fields == null) {
-      return klass[$$fields]
+  klass.attributes = function (attributes) {
+    if (attributes == null) {
+      return klass[$$attributes]
     } else {
-      for (let name of Object.keys(fields)) {
-        let newField = Field.shorthand(name, fields[name])
-        newField.augmentModel(klass)
-        klass[$$fields][name] = newField
+      for (let name of Object.keys(attributes)) {
+        let newAttribute = Attribute.shorthand(name, attributes[name])
+        newAttribute.augmentModel(klass)
+        klass[$$attributes][name] = newAttribute
       }
       return klass
     }
@@ -112,13 +123,26 @@ const Model = function Model (name) {
     return klass
   }
 
-  klass.prototype.update = function (data) {
+  klass.derive('clean', {cache: true}, function () {
+    let data = {}
+    for (let key in this.$data) {
+      let value = this.$data[key]
+      if (Model.isInstance(value)) {
+        data[key] = value.clean
+      } else {
+        data[key] = value
+      }
+    }
+    return data
+  })
+
+  klass.prototype.updateAttributes = function (data) {
     let difference = {}
-    for (let fieldName in data) {
-      if (fieldName in klass.fields()) {
-        let field = klass.fields()[fieldName]
-        if (field.maybeUpdate(this, data[fieldName])) {
-          difference[fieldName] = this[fieldName]
+    for (let attributeName in data) {
+      if (attributeName in klass.attributes()) {
+        let attribute = klass.attributes()[attributeName]
+        if (attribute.maybeUpdate(this, data[attributeName])) {
+          difference[attributeName] = this[attributeName]
         }
       }
     }
@@ -131,6 +155,38 @@ const Model = function Model (name) {
   return klass
 }
 
-Model.DefinitionException = ModelDefinitionException
+Object.defineProperties(Model, {
+  $$findOne: {
+    value: Symbol('findOne'),
+    __proto__: null
+  },
+  $$findMany: {
+    value: Symbol('findMany'),
+    __proto__: null
+  },
+  $$store: {
+    value: Symbol('store'),
+    __proto__: null
+  },
+  DefinitionException: {
+    value: ModelDefinitionException,
+    __proto__: null
+  },
+  isModel: {
+    value: function (object) {
+      return (object != null) && object.hasOwnProperty($$isModel)
+    },
+    __proto__: null
+  },
+  isInstance: {
+    value: function (object, model) {
+      if (model == null) {
+        return (object != null) && this.isModel(object.constructor)
+      } else {
+        return object instanceof model
+      }
+    }
+  }
+})
 
 module.exports = Model

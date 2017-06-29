@@ -34,7 +34,7 @@ var LocalStorageMixin = Mixin("LocalStorage")
   })
 
 var Person = Model("Person")
-  .fields({
+  .attributes({
     nas: {require: true, type: String},
     firstname: {require: true, type: String},
     lastname: {require: true, type: String},

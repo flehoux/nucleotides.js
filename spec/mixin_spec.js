@@ -16,7 +16,7 @@ describe('A Model modified using a mixin that defines derived properties', funct
       })
 
   var Person = Model('Person')
-      .fields({
+      .attributes({
         firstName: String,
         lastName: String,
         birthdate: Date
@@ -114,7 +114,7 @@ describe('A Mixin used in another mixin', function () {
       .use(new NameMixin({foo: 'bar'}))
 
   var Person = Model('Person')
-      .fields({
+      .attributes({
         firstName: String,
         lastName: String,
         birthdate: Date
@@ -159,7 +159,7 @@ describe('A Mixin used in another mixin dynamically', function () {
       })
 
   var Person = Model('Person')
-      .fields({
+      .attributes({
         firstName: String,
         lastName: String,
         birthdate: Date

@@ -84,8 +84,8 @@ class DerivedProperty {
         })
       } else if (this.options.cached && this.options.cached.length > 0) {
         klass.$on('change', function (object, difference) {
-          for (let fieldName of derived.options.cached) {
-            if (fieldName in difference) {
+          for (let attributeName of derived.options.cached) {
+            if (attributeName in difference) {
               if (derived.options.eager === true) {
                 derived.cache(object)
               } else {

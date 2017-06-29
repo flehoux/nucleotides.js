@@ -1,10 +1,10 @@
 /* global describe it expect jasmine */
 
-describe('A Model with simple fields, methods and derived properties', function () {
+describe('A Model with simple attributes, methods and derived properties', function () {
   const { Model } = require('..')
 
   var Person = Model('Person')
-      .fields({
+      .attributes({
         firstName: String,
         lastName: String,
         birthdate: Date
@@ -15,7 +15,7 @@ describe('A Model with simple fields, methods and derived properties', function 
       })
       .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
 
-  it('should hold valid data with respect to field definition', function () {
+  it('should hold valid data with respect to attribute definition', function () {
     var person = new Person({
       firstName: 'John',
       lastName: 'Smith',
@@ -47,5 +47,71 @@ describe('A Model with simple fields, methods and derived properties', function 
     person.toUpperCase()
 
     expect(person.fullName).toEqual('JOHN SMITH')
+  })
+})
+
+describe('A Model with an attribute typed as another Model', function () {
+  const { Model } = require('..')
+
+  var Name = Model('Name')
+      .attributes({
+        first: String,
+        last: String
+      })
+      .derive('full', function () { return this.first + ' ' + this.last })
+
+  var Person = Model('Person')
+      .attributes({
+        name: Name,
+        birthdate: Date
+      })
+
+  it('should hold valid data with respect to attribute definition', function () {
+    var person = new Person({
+      name: {
+        first: 'John',
+        last: 2
+      },
+      birthdate: 527817600000
+    })
+
+    expect(person.name.first).toEqual(jasmine.any(String))
+    expect(person.name.last).toEqual(jasmine.any(String))
+    expect(person.name).toEqual(jasmine.any(Name))
+    expect(person.name.full).toEqual('John 2')
+  })
+
+  it('should be able to accept already instantiated model instance', function () {
+    var name = new Name({
+      first: 'John',
+      last: 'Smith'
+    })
+    var person = new Person({
+      name,
+      birthdate: 527817600000
+    })
+
+    expect(person.name.first).toEqual(jasmine.any(String))
+    expect(person.name.last).toEqual(jasmine.any(String))
+    expect(person.name).toEqual(jasmine.any(Name))
+    expect(person.name.full).toEqual('John Smith')
+  })
+
+  it('should provide deeply cleaned data', function () {
+    var person = new Person({
+      name: {
+        first: 'John',
+        last: 2
+      },
+      birthdate: 527817600000
+    })
+
+    expect(person.clean).toEqual({
+      name: {
+        first: 'John',
+        last: '2'
+      },
+      birthdate: new Date(527817600000)
+    })
   })
 })

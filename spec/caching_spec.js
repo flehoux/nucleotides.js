@@ -10,7 +10,7 @@ describe('A Model with cached derived properties', function () {
   }
 
   var Person = Model('Person')
-      .fields({
+      .attributes({
         firstName: String,
         lastName: String,
         birthdate: { type: Date }

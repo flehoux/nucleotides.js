@@ -3,13 +3,14 @@
 const $$type = Symbol('type')
 const $$generator = Symbol('generator')
 
-function FieldDefinitionException (code, message, value) {
+function AttributeDefinitionException (code, message, value) {
   this.code = code
   this.message = message
   this.value = value
 }
 
 function generatorForBaseType (type) {
+  let Model = require('./model')
   if (type === String) {
     return (value) => value.toString()
   } else if (type === Number) {
@@ -17,7 +18,7 @@ function generatorForBaseType (type) {
   } else if (type === Boolean) {
     return (value) => !!value
   } else if (type === Date) {
-    return (value) => {
+    return function (value) {
       if (typeof value === 'string' || typeof value === 'number') {
         return new Date(value)
       } else if (typeof value === 'object') {
@@ -29,10 +30,18 @@ function generatorForBaseType (type) {
         }
       }
     }
+  } else if (Model.isModel(type)) {
+    return function (...args) {
+      if (Model.isInstance(args[0], type)) {
+        return args[0]
+      } else {
+        return Reflect.construct(type, args)
+      }
+    }
   }
 }
 
-class Field {
+class Attribute {
   constructor (name, type, options = {}) {
     this.name = name
     this.parseType(type)
@@ -44,12 +53,13 @@ class Field {
   }
 
   static allowsBaseType (type) {
-    return this.baseTypes.indexOf(type) >= 0
+    let Model = require('./model')
+    return this.baseTypes.indexOf(type) >= 0 || Model.isModel(type)
   }
 
   set baseType (typeClass) {
     if (this.hasOwnProperty($$type)) {
-      throw new FieldDefinitionException('baseType', `Base type for field ${this.name} has already been set`, typeClass)
+      throw new AttributeDefinitionException('baseType', `Base type for attribute ${this.name} has already been set`, typeClass)
     } else {
       this[$$type] = typeClass
     }
@@ -77,17 +87,17 @@ class Field {
         Object.defineProperty(this, 'collection', {value: true})
         typeDefinition = type[0]
       } else {
-        throw new FieldDefinitionException('type', `Type for field ${this.name} can't be an array with multiple values`, type)
+        throw new AttributeDefinitionException('type', `Type for attribute ${this.name} can't be an array with multiple values`, type)
       }
     } else {
       Object.defineProperty(this, 'collection', {value: false})
       typeDefinition = type
     }
 
-    if (Field.allowsBaseType(typeDefinition)) {
+    if (Attribute.allowsBaseType(typeDefinition)) {
       this.baseType = typeDefinition
       this[$$generator] = generatorForBaseType(typeDefinition)
-    } else if (Field.allowsBaseType(typeDefinition.base)) {
+    } else if (Attribute.allowsBaseType(typeDefinition.base)) {
       this.baseType = typeDefinition.base
       if (typeof typeDefinition.generator === 'function') {
         this[$$generator] = typeDefinition.generator
@@ -108,24 +118,24 @@ class Field {
   }
 
   augmentModel (klass) {
-    let field = this
+    let attribute = this
 
     Object.defineProperty(klass.prototype, this.name, {
       set: function (value) {
-        if (field.maybeUpdate(this, value)) {
-          let difference = { [field.name]: this[field.name] }
+        if (attribute.maybeUpdate(this, value)) {
+          let difference = { [attribute.name]: this[attribute.name] }
           this.$emit('change', difference)
           klass.$emit('change', this, difference)
         }
       },
       get: function () {
-        return this.$data[field.name]
+        return this.$data[attribute.name]
       }
     })
 
     klass.$on('new', function (object) {
-      if (object.$data[field.name] == null) {
-        field.initializeIn(object)
+      if (object.$data[attribute.name] == null) {
+        attribute.initializeIn(object)
       }
     })
   }
@@ -141,16 +151,16 @@ class Field {
   }
 }
 
-Field.shorthand = function (name, options) {
+Attribute.shorthand = function (name, options) {
   if (options.hasOwnProperty('type')) {
     let type = options.type
     delete options.type
-    return new Field(name, type, options)
+    return new Attribute(name, type, options)
   } else {
-    return new Field(name, options)
+    return new Attribute(name, options)
   }
 }
 
-Field.DefinitionException = FieldDefinitionException
+Attribute.DefinitionException = AttributeDefinitionException
 
-module.exports = Field
+module.exports = Attribute

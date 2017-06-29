@@ -11,7 +11,7 @@ const $$methods = Symbol('methods')
 
 const DerivedProperty = require('./derived')
 
-const emitter = require('./emitter')
+const makeEmitter = require('./emitter')
 
 module.exports = function Mixin (name) {
   const klass = function (...args) {
@@ -23,8 +23,8 @@ module.exports = function Mixin (name) {
   Object.defineProperty(klass, 'name', {value: name, __proto__: null})
   Object.defineProperty(klass, 'uniqueKey', {value: () => uniqueKey, __proto__: null})
 
-  emitter(klass)
-  emitter(klass.prototype)
+  makeEmitter(klass)
+  makeEmitter(klass.prototype)
 
   klass[$$constructor] = function (data) {
     if (typeof data === 'object') {
