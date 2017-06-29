@@ -18,7 +18,7 @@ var GenealogyMixin = Mixin("Genealogy")
   .derive("children", function (mixin) {
     // implement getting the children of `this`
   })
-  .derive("siblings", {lazy: true}, function (mixin) {
+  .derive("siblings", {eager: true}, function (mixin) {
     // implement getting the siblings of `this`
   });
 
@@ -34,13 +34,13 @@ var LocalStorageMixin = Mixin("LocalStorage")
   })
 
 var Person = Model("Person")
-  .fields({
-    nas: {require: String},
-    firstname: {require: String},
-    lastname: {require: String},
+  .attributes({
+    nas: {require: true, type: String},
+    firstname: {require: true, type: String},
+    lastname: {require: true, type: String},
     birthdate: Date,
     parentsNas: [String],
-    gender: {require: String, accept: ["M", "F"]}
+    gender: {type: String, accept: ["M", "F"]}
   })
   .derive("fullname", function() { return this.firstname + " " + this.lastname; })
   .use(new GenealogyMixin({parentKey: "nas", childKey: "parentsNas"}))
