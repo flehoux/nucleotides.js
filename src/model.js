@@ -6,6 +6,7 @@ const $$data = Symbol('data')
 const $$mixins = Symbol('mixins')
 const $$isModel = Symbol('isModel')
 const $$parents = Symbol('parents')
+const $$referenceTracker = Symbol('referenceTracker')
 
 const Attribute = require('./attribute')
 const DerivedProperty = require('./derived')
@@ -20,12 +21,14 @@ function ModelDefinitionException (code, message, value) {
 const Model = function Model (name) {
   const klass = function (...args) {
     this[$$data] = {}
-    this[$$parents] = new Set([])
+    this[$$parents] = {}
+    this[$$referenceTracker] = {}
+
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
     this.$on('change', function (diff) {
-      for (let parent of this[$$parents]) {
-        parent.$childDidChange(this)
+      for (let parentKey in this[$$parents]) {
+        this[$$parents][parentKey].$childDidChange(this)
       }
     })
   }
@@ -182,12 +185,33 @@ const Model = function Model (name) {
     }
   }
 
-  klass.prototype.$addParent = function (parent) {
-    this[$$parents].add(parent)
+  klass.prototype.$setTracker = function (name, symbol) {
+    this[$$referenceTracker][name] = symbol
+    this[$$referenceTracker][symbol] = name
   }
 
-  klass.prototype.$removeParent = function (parent) {
-    this[$$parents].delete(parent)
+  klass.prototype.$tracker = function (ref) {
+    if (typeof ref === 'string') {
+      return this[$$referenceTracker][ref]
+    } else if (typeof ref === 'symbol') {
+      return this[$$referenceTracker][ref]
+    }
+  }
+
+  klass.prototype.$addParent = function (parent, key) {
+    let newInParent = !this[$$parents].hasOwnProperty(key)
+    this[$$parents][key] = parent
+    if (newInParent) {
+      this.$emit('addedInObject', parent)
+    }
+  }
+
+  klass.prototype.$removeParent = function (parent, key) {
+    let existedInParent = this[$$parents].hasOwnProperty(key)
+    delete this[$$parents][key]
+    if (existedInParent) {
+      this.$emit('removedFromObject', parent)
+    }
   }
 
   klass.prototype.$childDidChange = function (child) {

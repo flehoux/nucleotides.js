@@ -113,21 +113,48 @@ class Attribute {
   }
 
   maybeUpdate (object, value) {
-    let nextValue = this.generator(value)
-    if (object.$data[this.name] !== nextValue) {
-      if (this.isModel) {
-        let oldValue = object.$data[this.name]
-        if (oldValue != null) {
-          oldValue.$removeParent(object, this.name)
+    if (this.collection) {
+      let nextValue
+      if (value != null) {
+        if (typeof value[Symbol.iterator] === 'function') {
+          nextValue = []
+          for (let item of value) {
+            nextValue.push(this.generator(item))
+          }
         }
-        if (nextValue != null) {
-          nextValue.$addParent(object, this.name)
+      }
+      let oldValue = object.$data[this.name]
+      if (this.isModel && oldValue != null) {
+        for (let item of oldValue) {
+          if (nextValue == null || nextValue.indexOf(item) < 0) {
+            item.$removeParent(object, object.$tracker(this.name))
+          }
         }
       }
       object.$data[this.name] = nextValue
+      if (this.isModel && nextValue != null) {
+        for (let item of nextValue) {
+          if (oldValue == null || oldValue.indexOf(item) < 0) {
+            item.$addParent(object, object.$tracker(this.name))
+          }
+        }
+      }
       return true
     } else {
-      return false
+      let nextValue = this.generator(value)
+      if (object.$data[this.name] !== nextValue) {
+        let oldValue = object.$data[this.name]
+        if (this.isModel && oldValue != null) {
+          oldValue.$removeParent(object, object.$tracker(this.name))
+        }
+        object.$data[this.name] = nextValue
+        if (this.isModel && nextValue != null) {
+          nextValue.$addParent(object, object.$tracker(this.name))
+        }
+        return true
+      } else {
+        return false
+      }
     }
   }
 
@@ -151,6 +178,7 @@ class Attribute {
       if (object.$data[attribute.name] == null) {
         attribute.initializeIn(object)
       }
+      object.$setTracker(attribute.name, Symbol(`Attribute(${attribute.name})`))
     })
   }
 
@@ -166,7 +194,7 @@ class Attribute {
 
   containsInstance (parent, child) {
     if (this.collection) {
-      return parent.$data[this.name].indexOf(child) >= 0
+      return parent.$data[this.name] && parent.$data[this.name].indexOf(child) >= 0
     } else {
       return parent.$data[this.name] === child
     }

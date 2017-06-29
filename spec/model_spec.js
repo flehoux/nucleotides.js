@@ -50,6 +50,42 @@ describe('A Model with simple attributes, methods and derived properties', funct
   })
 })
 
+describe('A Model with array attributes', function () {
+  const { Model } = require('..')
+
+  var Person = Model('Person')
+      .attributes({
+        firstName: String,
+        lastName: String,
+        emails: [String]
+      })
+
+  it('should apply the typed generator to each component of the array', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      emails: ['asd', new Date(), 1]
+    })
+
+    expect(person.emails[0]).toEqual(jasmine.any(String))
+    expect(person.emails[1]).toEqual(jasmine.any(String))
+    expect(person.emails[1]).toEqual(jasmine.any(String))
+  })
+
+  it('should apply the typed generator to each component of the array', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      emails: []
+    })
+    person.emails = ['asd', new Date(), 1]
+
+    expect(person.emails[0]).toEqual(jasmine.any(String))
+    expect(person.emails[1]).toEqual(jasmine.any(String))
+    expect(person.emails[1]).toEqual(jasmine.any(String))
+  })
+})
+
 describe('A Model with an attribute typed as another Model', function () {
   const { Model } = require('..')
 
@@ -60,10 +96,25 @@ describe('A Model with an attribute typed as another Model', function () {
       })
       .derive('full', function () { return this.first + ' ' + this.last })
 
+  var Email = Model('Email')
+      .attributes({
+        domain: String,
+        user: String
+      })
+      .derive('full', function () { return this.user + '@' + this.domain })
+      .construct(function (email) {
+        if (typeof email === 'string') {
+          const [user, domain] = email.split('@')
+          this.user = user
+          this.domain = domain
+        }
+      })
+
   var Person = Model('Person')
       .attributes({
         name: Name,
-        birthdate: Date
+        birthdate: Date,
+        emails: [Email]
       })
 
   it('should hold valid data with respect to attribute definition', function () {
@@ -111,6 +162,7 @@ describe('A Model with an attribute typed as another Model', function () {
         first: 'John',
         last: '2'
       },
+      emails: null,
       birthdate: new Date(527817600000)
     })
   })
@@ -139,6 +191,53 @@ describe('A Model with an attribute typed as another Model', function () {
       person.name.last = 'Anderson'
       setTimeout(function () {
         expect(spy.calls.argsFor(0)[0].name.last).toBe('Anderson')
+        expect(spy.calls.count()).toBe(1)
+        done()
+      }, 0)
+    }, 0)
+  })
+
+  it('should properly instantiate each item of a list of nested models', function () {
+    var person = new Person({
+      name: {
+        first: 'John',
+        last: 'Smith'
+      },
+      emails: ['john@smith.org', 'johnsmith@gmail.com']
+    })
+
+    expect(person.emails[0]).toEqual(jasmine.any(Email))
+    expect(person.emails[0].domain).toBe('smith.org')
+    expect(person.emails[1]).toEqual(jasmine.any(Email))
+    expect(person.emails[1].user).toBe('johnsmith')
+    expect(person.emails[0].full).toBe('john@smith.org')
+  })
+
+  it('should bubble up \'change\' events from a list of nested models', function (done) {
+    var spy = jasmine.createSpy()
+    var person = new Person({
+      name: {
+        first: 'John',
+        last: 'Smith'
+      },
+      emails: ['john@smith.org', 'johnsmith@gmail.com']
+    })
+
+    let email = person.emails[0]
+    email.$on('change', spy)
+    email.user = 'larry'
+
+    setTimeout(function () {
+      expect(spy.calls.count()).toBe(1)
+      expect(spy.calls.argsFor(0)[0].user).toBe('larry')
+
+      email.$off('change', spy)
+      person.$on('change', spy)
+      spy.calls.reset()
+
+      email.user = 'karry'
+      setTimeout(function () {
+        expect(spy.calls.argsFor(0)[0].emails.user).toBe('karry')
         expect(spy.calls.count()).toBe(1)
         done()
       }, 0)
