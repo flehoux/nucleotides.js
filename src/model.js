@@ -7,6 +7,7 @@ const $$findOne = Symbol('find_one')
 const $$findMany = Symbol('find_many')
 const $$store = Symbol('store')
 const $$mixins = Symbol('mixins')
+const $$methods = Symbol('methods')
 
 const Field = require('./field')
 const DerivedProperty = require('./derived')
@@ -75,6 +76,22 @@ const Model = function Model (name) {
   klass.derive = function (name, options, getter) {
     let derived = new DerivedProperty(name, options, getter)
     derived.augmentModel(klass)
+    return klass
+  }
+
+  klass.method = function (name, fn) {
+    if (typeof fn === 'function') {
+      klass.prototype[name] = fn
+    }
+    return klass
+  }
+
+  klass.methods = function (methods) {
+    if (typeof methods === 'object') {
+      for (let methodName in methods) {
+        klass.method(methodName, methods[methodName])
+      }
+    }
     return klass
   }
 

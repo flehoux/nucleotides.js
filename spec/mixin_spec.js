@@ -44,14 +44,18 @@ describe('A Model modified using a mixin that defines derived properties', funct
     expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
   })
 
+  it('should pass mixin instance down to mixin-inherited methods', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    person.fullName
-    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual("bar")
+    mixinSpy.calls.reset()
+
+    person.toUpperCase() // eslint-disable-line no-unused-expressions
+    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
+    expect(person.fullName).toEqual('JOHN SMITH')
   })
 })
 

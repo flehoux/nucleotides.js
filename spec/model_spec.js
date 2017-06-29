@@ -36,5 +36,16 @@ describe('A Model with simple fields, methods and derived properties', function 
 
     expect(person.fullName).toEqual('John Smith')
   })
+
+  it('should be able to expose methods that change internal data', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      birthdate: 527817600000
+    })
+
+    person.toUpperCase()
+
+    expect(person.fullName).toEqual('JOHN SMITH')
   })
 })
