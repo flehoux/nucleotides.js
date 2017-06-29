@@ -23,7 +23,7 @@ function debounce (fn, args, ctx) {
   })
 };
 
-module.exports = function emitter (thing, options) {
+module.exports = function makeEmitter (thing, options) {
   var opts = options || {}
   const $$listeners = Symbol('listeners')
   if (thing === undefined) { thing = {} }
