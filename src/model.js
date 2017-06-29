@@ -34,14 +34,17 @@ const Model = function Model (name) {
   klass[$$mixins] = []
   klass[$$isModel] = true
 
-  Object.defineProperty(klass, 'name', {
-    value: name,
-    __proto__: null
+  Object.defineProperties(klass, {
+    name: {
+      value: name,
+      __proto__: null
+    },
+    mixins: {
+      value: klass[$$mixins],
+      __proto__: null
+    }
   })
-  Object.defineProperty(klass, 'mixins', {
-    value: klass[$$mixins],
-    __proto__: null
-  })
+
   Object.defineProperties(klass.prototype, {
     $data: {
       get: function () {
