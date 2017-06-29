@@ -14,6 +14,10 @@ describe('A Model modified using a mixin that defines derived properties', funct
         this.firstName = this.firstName.toUpperCase()
         this.lastName = this.lastName.toUpperCase()
       })
+      .classMethod('create', function (mixin, ...args) {
+        mixinSpy(mixin)
+        return Reflect.construct(this, args)
+      })
 
   var Person = Model('Person')
       .attributes({
@@ -56,6 +60,13 @@ describe('A Model modified using a mixin that defines derived properties', funct
     person.toUpperCase() // eslint-disable-line no-unused-expressions
     expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
     expect(person.fullName).toEqual('JOHN SMITH')
+  })
+
+  it('should expose the class methods for execution', function () {
+    mixinSpy.calls.reset()
+    var p = Person.create({firstName: 'John', lastName: 'Smith'})
+    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
+    expect(p.fullName).toBe('John Smith')
   })
 })
 

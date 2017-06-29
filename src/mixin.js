@@ -8,6 +8,7 @@ const $$findMany = Symbol('find_many')
 const $$store = Symbol('store')
 const $$usedMixins = Symbol('used')
 const $$methods = Symbol('methods')
+const $$classMethods = Symbol('classMethods')
 
 const DerivedProperty = require('./derived')
 
@@ -40,6 +41,7 @@ module.exports = function Mixin (name) {
   klass[$$store] = []
   klass[$$usedMixins] = []
   klass[$$methods] = {}
+  klass[$$classMethods] = {}
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
@@ -74,9 +76,26 @@ module.exports = function Mixin (name) {
     return klass
   }
 
+  klass.classMethod = function (name, fn) {
+    if (typeof fn === 'function') {
+      klass[$$classMethods][name] = fn
+    }
+    return klass
+  }
+
+  klass.classMethods = function (methods) {
+    if (typeof methods === 'object') {
+      for (let methodName in methods) {
+        klass.classMethod(methodName, methods[methodName])
+      }
+    }
+    return klass
+  }
+
   klass.prototype.augmentModel = function (model) {
     augmentWithDerivedProperties(this, model)
     augmentWithMethods(this, model)
+    augmentWithClassMethods(this, model)
     augmentWithMixins(this, model)
   }
 
@@ -99,6 +118,15 @@ module.exports = function Mixin (name) {
     for (let methodName in klass[$$methods]) {
       let method = klass[$$methods][methodName]
       model.method(methodName, function (...args) {
+        return method.call(this, mixin, ...args)
+      })
+    }
+  }
+
+  function augmentWithClassMethods (mixin, model) {
+    for (let methodName in klass[$$classMethods]) {
+      let method = klass[$$classMethods][methodName]
+      model.classMethod(methodName, function (...args) {
         return method.call(this, mixin, ...args)
       })
     }

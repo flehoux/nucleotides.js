@@ -120,6 +120,22 @@ const Model = function Model (name) {
     return klass
   }
 
+  klass.classMethod = function (name, fn) {
+    if (typeof fn === 'function') {
+      klass[name] = fn
+    }
+    return klass
+  }
+
+  klass.classMethods = function (methods) {
+    if (typeof methods === 'object') {
+      for (let methodName in methods) {
+        klass.classmethod(methodName, methods[methodName])
+      }
+    }
+    return klass
+  }
+
   klass.use = function (mixin) {
     var alreadyMixedIn = klass.mixins.some(function (other) {
       return other.constructor.uniqueKey() === mixin.constructor.uniqueKey()

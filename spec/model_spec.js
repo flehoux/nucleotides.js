@@ -145,3 +145,23 @@ describe('A Model with an attribute typed as another Model', function () {
     }, 0)
   })
 })
+
+describe('A Model with simple class methods', function () {
+  var {Model} = require('..')
+  var Person = Model('Person')
+    .attributes({
+      firstName: String,
+      lastName: {
+        base: String,
+        initial: 'Smith'
+      }
+    })
+    .classMethod('create', function (...args) {
+      return Reflect.construct(this, args)
+    })
+
+  it('should expose the class methods for execution', function () {
+    var p = Person.create({firstName: 'John'})
+    expect(p.firstName).toBe('John')
+  })
+})
