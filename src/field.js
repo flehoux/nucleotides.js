@@ -1,7 +1,7 @@
 'use strict'
 
-const __type = Symbol('type')
-const __generator = Symbol('generator')
+const $$type = Symbol('type')
+const $$generator = Symbol('generator')
 
 function FieldDefinitionException (code, message, value) {
   this.code = code
@@ -48,19 +48,19 @@ class Field {
   }
 
   set baseType (typeClass) {
-    if (this.hasOwnProperty(__type)) {
+    if (this.hasOwnProperty($$type)) {
       throw new FieldDefinitionException('baseType', `Base type for field ${this.name} has already been set`, typeClass)
     } else {
-      this[__type] = typeClass
+      this[$$type] = typeClass
     }
   }
 
   get baseType () {
-    return this[__type]
+    return this[$$type]
   }
 
   get generator () {
-    return this[__generator]
+    return this[$$generator]
   }
 
   parseOptions (options) {
@@ -86,13 +86,13 @@ class Field {
 
     if (Field.allowsBaseType(typeDefinition)) {
       this.baseType = typeDefinition
-      this[__generator] = generatorForBaseType(typeDefinition)
+      this[$$generator] = generatorForBaseType(typeDefinition)
     } else if (Field.allowsBaseType(typeDefinition.base)) {
       this.baseType = typeDefinition.base
       if (typeof typeDefinition.generator === 'function') {
-        this[__generator] = typeDefinition.generator
+        this[$$generator] = typeDefinition.generator
       } else {
-        this[__generator] = generatorForBaseType(typeDefinition)
+        this[$$generator] = generatorForBaseType(typeDefinition)
       }
     }
   }

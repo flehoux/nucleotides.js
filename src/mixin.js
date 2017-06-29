@@ -1,12 +1,12 @@
 'use strict'
 
-const __constructor = Symbol('construct')
+const $$constructor = Symbol('construct')
 
-const __derived_properties = Symbol('derived')
-const __find_one = Symbol('find_one')
-const __find_many = Symbol('find_many')
-const __store = Symbol('store')
-const __used_mixins = Symbol('used')
+const $$derivedProperties = Symbol('derived')
+const $$findOne = Symbol('find_one')
+const $$findMany = Symbol('find_many')
+const $$store = Symbol('store')
+const $$usedMixins = Symbol('used')
 
 const DerivedProperty = require('./derived')
 
@@ -14,8 +14,8 @@ const emitter = require('./emitter')
 
 module.exports = function Mixin (name) {
   const klass = function (...args) {
-    klass[__constructor].apply(this, args)
-    klass.$emit("new", this)
+    klass[$$constructor].apply(this, args)
+    klass.$emit('new', this)
   }
   const uniqueKey = Symbol('key')
 
@@ -25,7 +25,7 @@ module.exports = function Mixin (name) {
   emitter(klass)
   emitter(klass.prototype)
 
-  klass[__constructor] = function (data) {
+  klass[$$constructor] = function (data) {
     if (typeof data === 'object') {
       for (let key in data) {
         this[key] = data[key]
@@ -33,32 +33,39 @@ module.exports = function Mixin (name) {
     }
   }
 
-  klass[__derived_properties] = []
-  klass[__find_one] = []
-  klass[__find_many] = []
-  klass[__store] = []
-  klass[__used_mixins] = []
+  klass[$$derivedProperties] = []
+  klass[$$findOne] = []
+  klass[$$findMany] = []
+  klass[$$store] = []
+  klass[$$usedMixins] = []
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
-      klass[__constructor] = fn
+      klass[$$constructor] = fn
     }
     return klass
   }
 
   klass.derive = function (name, options, getter) {
-    klass[__derived_properties].push({ name, options, getter })
+    klass[$$derivedProperties].push({ name, options, getter })
     return klass
   }
 
   klass.use = function (mixin) {
-    klass[__used_mixins].push(mixin)
+    klass[$$usedMixins].push(mixin)
+    return klass
+  }
+
     return klass
   }
 
   klass.prototype.augmentModel = function (model) {
-    let mixin = this
-    for (let derivedArgs of klass[__derived_properties]) {
+    augmentWithDerivedProperties(this, model)
+    augmentWithMixins(this, model)
+  }
+
+  function augmentWithDerivedProperties (mixin, model) {
+    for (let derivedArgs of klass[$$derivedProperties]) {
       var { name, options, getter } = derivedArgs
       if (typeof options === 'function') {
         getter = options
@@ -70,10 +77,12 @@ module.exports = function Mixin (name) {
       })
       derived.augmentModel(model)
     }
+  }
 
-    for (let subMixin of klass[__used_mixins]) {
+  function augmentWithMixins (mixin, model) {
+    for (let subMixin of klass[$$usedMixins]) {
       if (typeof subMixin === 'function') {
-        model.use(subMixin.call(this))
+        model.use(subMixin.call(mixin))
       } else {
         model.use(subMixin)
       }

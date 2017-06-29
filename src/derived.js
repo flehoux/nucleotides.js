@@ -20,7 +20,7 @@ class DerivedProperty {
     this.getter = getter
     this.options = options
     this.name = name
-    this.storage = Symbol('storage')
+    this.$$cache = Symbol('cache')
 
     this.prepareDefaults()
   }
@@ -40,11 +40,11 @@ class DerivedProperty {
   }
 
   cache (object) {
-    object[this.storage] = this.getter.call(object)
+    object[this.$$cache] = this.getter.call(object)
   }
 
   clearCache (object) {
-    delete object[this.storage]
+    delete object[this.$$cache]
   }
 
   augmentModel (klass) {
@@ -63,13 +63,13 @@ class DerivedProperty {
 
       Object.defineProperty(klass.prototype, derived.name, {
         get: function () {
-          if (this.hasOwnProperty(derived.storage)) {
-            return this[derived.storage]
+          if (this.hasOwnProperty(derived.$$cache)) {
+            return this[derived.$$cache]
           } else {
             if (derived.options.eager === false) {
               derived.cache(this)
             }
-            return this[derived.storage]
+            return this[derived.$$cache]
           }
         }
       })
@@ -91,7 +91,7 @@ class DerivedProperty {
               } else {
                 derived.clearCache(object)
               }
-              return;
+              return
             }
           }
         })

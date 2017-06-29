@@ -1,15 +1,14 @@
 'use strict'
 
-const __constructor = Symbol('construct')
-const __fields = Symbol('fields')
-const __data = Symbol('data')
-const __find_one = Symbol('find_one')
-const __find_many = Symbol('find_many')
-const __store = Symbol('store')
-const __mixins = Symbol('mixins')
+const $$constructor = Symbol('construct')
+const $$fields = Symbol('fields')
+const $$data = Symbol('data')
+const $$findOne = Symbol('find_one')
+const $$findMany = Symbol('find_many')
+const $$store = Symbol('store')
+const $$mixins = Symbol('mixins')
 
 const Field = require('./field')
-const Mixin = require('./mixin')
 const DerivedProperty = require('./derived')
 const emitter = require('./emitter')
 
@@ -21,54 +20,53 @@ function ModelDefinitionException (code, message, value) {
 
 const Model = function Model (name) {
   const klass = function (...args) {
-    this[__data] = {}
-    klass[__constructor].apply(this, args)
-    klass.$emit("new", this)
+    this[$$data] = {}
+    klass[$$constructor].apply(this, args)
+    klass.$emit('new', this)
   }
 
   Object.defineProperty(klass, 'name', {value: name, __proto__: null})
-  Object.defineProperty(klass, 'mixins', {get: function () { return this[__mixins] } })
-
-  Object.defineProperty(klass.prototype, '$data', {get: function () { return this[__data] }})
+  Object.defineProperty(klass, 'mixins', { get: function () { return this[$$mixins] } })
+  Object.defineProperty(klass.prototype, '$data', {get: function () { return this[$$data] }})
 
   emitter(klass)
   emitter(klass.prototype)
 
-  klass[__constructor] = function (data) {
+  klass[$$constructor] = function (data) {
     if (data == null) return
 
-    for (let fieldName in klass[__fields]) {
-      let field = klass[__fields][fieldName]
+    for (let fieldName in klass[$$fields]) {
+      let field = klass[$$fields][fieldName]
       if (data[fieldName] != null) {
         field.maybeUpdate(this, data[fieldName])
       }
     }
   }
-  klass[__fields] = {}
-  klass[__mixins] = []
+  klass[$$fields] = {}
+  klass[$$mixins] = []
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
-      klass[__constructor] = fn
+      klass[$$constructor] = fn
     }
     return klass
   }
 
-  klass.field = function(name, type, options) {
+  klass.field = function (name, type, options) {
     const newField = new Field(name, type, options)
     newField.augmentModel(klass)
-    klass[__fields][name] = newField
+    klass[$$fields][name] = newField
     return klass
   }
 
-  klass.fields = function(fields) {
+  klass.fields = function (fields) {
     if (fields == null) {
-      return klass[__fields]
+      return klass[$$fields]
     } else {
       for (let name of Object.keys(fields)) {
         let newField = Field.shorthand(name, fields[name])
         newField.augmentModel(klass)
-        klass[__fields][name] = newField
+        klass[$$fields][name] = newField
       }
       return klass
     }
@@ -82,7 +80,7 @@ const Model = function Model (name) {
 
   klass.use = function (mixin) {
     var alreadyMixedIn = klass.mixins.some(function (other) {
-      return other.constructor.uniqueKey() == mixin.constructor.uniqueKey()
+      return other.constructor.uniqueKey() === mixin.constructor.uniqueKey()
     })
 
     if (alreadyMixedIn) {

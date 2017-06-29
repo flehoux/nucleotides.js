@@ -1,32 +1,49 @@
-describe("A Model modified using a mixin that defines derived properties", function () {
+/* global describe it expect jasmine */
+
+describe('A Model modified using a mixin that defines derived properties', function () {
   const { Model, Mixin } = require('..')
   const mixinSpy = jasmine.createSpy()
 
-  var NameMixin = Mixin("NameMixin")
-      .derive("fullName", function(mixin) {
+  var NameMixin = Mixin('NameMixin')
+      .derive('fullName', function (mixin) {
         mixinSpy(mixin)
         return this.firstName + ' ' + this.lastName
       })
+      .method('toUpperCase', function (mixin) {
+        mixinSpy(mixin)
+        this.firstName = this.firstName.toUpperCase()
+        this.lastName = this.lastName.toUpperCase()
+      })
 
-  var Person = Model("Person")
+  var Person = Model('Person')
       .fields({
         firstName: String,
         lastName: String,
         birthdate: Date
       })
-      .use(new NameMixin({foo: "bar"}))
+      .use(new NameMixin({foo: 'bar'}))
 
-  it("should be able to derive dynamic properties just-in-time", function () {
+  it('should be able to derive dynamic properties just-in-time', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    expect(person.fullName).toEqual("John Smith")
+    expect(person.fullName).toEqual('John Smith')
   })
 
-  it("should pass mixin instance down to derived property getters", function () {
+  it('should pass mixin instance down to derived property getters', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      birthdate: 527832000000
+    })
+
+    person.fullName // eslint-disable-line no-unused-expressions
+    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
+  })
+
     var person = new Person({
       firstName: "John",
       lastName: "Smith",
@@ -38,11 +55,11 @@ describe("A Model modified using a mixin that defines derived properties", funct
   })
 })
 
-describe("A Mixin being used in a Model", function () {
+describe('A Mixin being used in a Model', function () {
   const { Model, Mixin } = require('..')
 
-  it("should trigger the 'use' event", function () {
-    const MixinA = Mixin("A")
+  it('should trigger the \'use\' event', function () {
+    const MixinA = Mixin('A')
 
     let mixin = new MixinA()
     let spy = jasmine.createSpy()
@@ -50,7 +67,7 @@ describe("A Mixin being used in a Model", function () {
     MixinA.$on('use', spy)
     mixin.$on('use', spy)
 
-    const ModelA = Model("A").use(mixin)
+    const ModelA = Model('A').use(mixin)
 
     expect(spy).toHaveBeenCalled()
     expect(spy.calls.count()).toEqual(2)
@@ -59,110 +76,110 @@ describe("A Mixin being used in a Model", function () {
     expect(spy.calls.argsFor(1)[0]).toEqual(ModelA)
   })
 
-  it("cannot be reused a second time in the same model", function () {
-    const MixinA = Mixin("A")
+  it('cannot be reused a second time in the same model', function () {
+    const MixinA = Mixin('A')
 
     let mixin = new MixinA()
-    let other_mixin = new MixinA()
+    let otherMixin = new MixinA()
     let spy = jasmine.createSpy()
 
     MixinA.$on('use', spy)
     mixin.$on('use', spy)
 
     var createModel = function () {
-      var ModelA = Model("A")
+      var ModelA = Model('A') // eslint-disable-line no-unused-vars
         .use(mixin)
-        .use(other_mixin)
+        .use(otherMixin)
     }
 
     expect(createModel).toThrow()
   })
 })
 
-describe("A Mixin used in another mixin", function () {
+describe('A Mixin used in another mixin', function () {
   const { Model, Mixin } = require('..')
   const mixinSpy = jasmine.createSpy()
 
-  var NameMixin = Mixin("NameMixin")
-      .derive("fullName", function(mixin) {
+  var NameMixin = Mixin('NameMixin')
+      .derive('fullName', function (mixin) {
         mixinSpy(mixin)
         return this.firstName + ' ' + this.lastName
       })
 
-  var IntermediateMixin = Mixin("Middleman")
-      .use(new NameMixin({foo: "bar"}))
+  var IntermediateMixin = Mixin('Middleman')
+      .use(new NameMixin({foo: 'bar'}))
 
-  var Person = Model("Person")
+  var Person = Model('Person')
       .fields({
         firstName: String,
         lastName: String,
         birthdate: Date
       })
-      .use(new IntermediateMixin)
+      .use(new IntermediateMixin())
 
-  it("should be able to derive dynamic properties just-in-time", function () {
+  it('should be able to derive dynamic properties just-in-time', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    expect(person.fullName).toEqual("John Smith")
+    expect(person.fullName).toEqual('John Smith')
   })
 
-  it("should pass mixin instance down to derived property getters", function () {
+  it('should pass mixin instance down to derived property getters', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    person.fullName
-    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual("bar")
+    person.fullName // eslint-disable-line no-unused-expressions
+    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
   })
 })
 
-describe("A Mixin used in another mixin dynamically", function () {
+describe('A Mixin used in another mixin dynamically', function () {
   const { Model, Mixin } = require('..')
   const mixinSpy = jasmine.createSpy()
 
-  var NameMixin = Mixin("NameMixin")
-      .derive("fullName", function(mixin) {
+  var NameMixin = Mixin('NameMixin')
+      .derive('fullName', function (mixin) {
         mixinSpy(mixin)
         return this.firstName + ' ' + this.lastName
       })
 
-  var IntermediateMixin = Mixin("Middleman")
+  var IntermediateMixin = Mixin('Middleman')
       .use(function () {
         return new NameMixin({foo: this.param})
       })
 
-  var Person = Model("Person")
+  var Person = Model('Person')
       .fields({
         firstName: String,
         lastName: String,
         birthdate: Date
       })
-      .use(new IntermediateMixin({param: "bar"}))
+      .use(new IntermediateMixin({param: 'bar'}))
 
-  it("should be able to derive dynamic properties just-in-time", function () {
+  it('should be able to derive dynamic properties just-in-time', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    expect(person.fullName).toEqual("John Smith")
+    expect(person.fullName).toEqual('John Smith')
   })
 
-  it("should pass mixin instance down to derived property getters", function () {
+  it('should pass mixin instance down to derived property getters', function () {
     var person = new Person({
-      firstName: "John",
-      lastName: "Smith",
+      firstName: 'John',
+      lastName: 'Smith',
       birthdate: 527832000000
     })
 
-    person.fullName
-    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual("bar")
+    person.fullName // eslint-disable-line no-unused-expressions
+    expect(mixinSpy.calls.argsFor(0)[0].foo).toEqual('bar')
   })
 })
