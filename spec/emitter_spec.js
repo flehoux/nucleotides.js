@@ -60,7 +60,7 @@ describe('A Model, as an event emitter', function () {
     expect(spy.calls.argsFor(0)[0]).toEqual({ age: 19 })
     expect(spy.calls.mostRecent().object).toEqual(p)
 
-    p.updateAttributes({firstName: 'John', age: 50})
+    p.$updateAttributes({firstName: 'John', age: 50})
     expect(spy.calls.count()).toEqual(6)
     expect(spy.calls.argsFor(5)[0]).toEqual({ age: 50, firstName: 'John' })
   })

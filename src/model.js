@@ -5,6 +5,7 @@ const $$attributes = Symbol('attributes')
 const $$data = Symbol('data')
 const $$mixins = Symbol('mixins')
 const $$isModel = Symbol('isModel')
+const $$parents = Symbol('parents')
 
 const Attribute = require('./attribute')
 const DerivedProperty = require('./derived')
@@ -19,8 +20,14 @@ function ModelDefinitionException (code, message, value) {
 const Model = function Model (name) {
   const klass = function (...args) {
     this[$$data] = {}
+    this[$$parents] = new Set([])
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
+    this.$on('change', function (diff) {
+      for (let parent of this[$$parents]) {
+        parent.$childDidChange(this)
+      }
+    })
   }
 
   klass[$$attributes] = {}
@@ -65,10 +72,14 @@ const Model = function Model (name) {
   }
 
   klass.attribute = function (name, type, options) {
-    const newAttribute = new Attribute(name, type, options)
-    newAttribute.augmentModel(klass)
-    klass[$$attributes][name] = newAttribute
-    return klass
+    if (type == null && options == null) {
+      return klass[$$attributes][name]
+    } else {
+      const newAttribute = new Attribute(name, type, options)
+      newAttribute.augmentModel(klass)
+      klass[$$attributes][name] = newAttribute
+      return klass
+    }
   }
 
   klass.attributes = function (attributes) {
@@ -136,11 +147,11 @@ const Model = function Model (name) {
     return data
   })
 
-  klass.prototype.updateAttributes = function (data) {
+  klass.prototype.$updateAttributes = function (data) {
     let difference = {}
     for (let attributeName in data) {
       if (attributeName in klass.attributes()) {
-        let attribute = klass.attributes()[attributeName]
+        let attribute = klass.attribute(attributeName)
         if (attribute.maybeUpdate(this, data[attributeName])) {
           difference[attributeName] = this[attributeName]
         }
@@ -149,6 +160,23 @@ const Model = function Model (name) {
     if (Object.keys(difference).length > 0) {
       this.$emit('change', difference)
       klass.$emit('change', this, difference)
+    }
+  }
+
+  klass.prototype.$addParent = function (parent) {
+    this[$$parents].add(parent)
+  }
+
+  klass.prototype.$removeParent = function (parent) {
+    this[$$parents].delete(parent)
+  }
+
+  klass.prototype.$childDidChange = function (child) {
+    for (let attributeName in klass.attributes()) {
+      let attribute = klass.attribute(attributeName)
+      if (Model.isModel(attribute.baseType, child) && attribute.containsInstance(this, child)) {
+        this.$emit('change', {[attributeName]: child})
+      }
     }
   }
 

@@ -114,4 +114,34 @@ describe('A Model with an attribute typed as another Model', function () {
       birthdate: new Date(527817600000)
     })
   })
+
+  it('should bubble up \'change\' events from child model attributes', function (done) {
+    var spy = jasmine.createSpy()
+    var person = new Person({
+      name: {
+        first: 'Larry',
+        last: 2
+      },
+      birthdate: 527817600000
+    })
+
+    person.name.$on('change', spy)
+    person.name.last = 'Smith'
+
+    setTimeout(function () {
+      expect(spy.calls.count()).toBe(1)
+      expect(spy.calls.argsFor(0)[0].last).toBe('Smith')
+
+      person.name.$off('change', spy)
+      person.$on('change', spy)
+      spy.calls.reset()
+
+      person.name.last = 'Anderson'
+      setTimeout(function () {
+        expect(spy.calls.argsFor(0)[0].name.last).toBe('Anderson')
+        expect(spy.calls.count()).toBe(1)
+        done()
+      }, 0)
+    }, 0)
+  })
 })

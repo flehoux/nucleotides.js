@@ -69,6 +69,11 @@ class Attribute {
     return this[$$type]
   }
 
+  get isModel () {
+    let Model = require('./model')
+    return Model.isModel(this.baseType)
+  }
+
   get generator () {
     return this[$$generator]
   }
@@ -108,9 +113,18 @@ class Attribute {
   }
 
   maybeUpdate (object, value) {
-    let realValue = this.generator(value)
-    if (object.$data[this.name] !== realValue) {
-      object.$data[this.name] = realValue
+    let nextValue = this.generator(value)
+    if (object.$data[this.name] !== nextValue) {
+      if (this.isModel) {
+        let oldValue = object.$data[this.name]
+        if (oldValue != null) {
+          oldValue.$removeParent(object, this.name)
+        }
+        if (nextValue != null) {
+          nextValue.$addParent(object, this.name)
+        }
+      }
+      object.$data[this.name] = nextValue
       return true
     } else {
       return false
@@ -147,6 +161,14 @@ class Attribute {
       object.$data[this.name] = this.initial
     } else {
       object.$data[this.name] = null
+    }
+  }
+
+  containsInstance (parent, child) {
+    if (this.collection) {
+      return parent.$data[this.name].indexOf(child) >= 0
+    } else {
+      return parent.$data[this.name] === child
     }
   }
 }
