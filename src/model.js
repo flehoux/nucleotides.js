@@ -7,10 +7,12 @@ const $$mixins = Symbol('mixins')
 const $$isModel = Symbol('isModel')
 const $$parents = Symbol('parents')
 const $$referenceTracker = Symbol('referenceTracker')
+const $$priority = Symbol('priority')
 
 const Attribute = require('./attribute')
 const DerivedProperty = require('./derived')
 const makeEmitter = require('./emitter')
+const addStorageCapabilities = require('./storage')
 
 function ModelDefinitionException (code, message, value) {
   this.code = code
@@ -156,6 +158,28 @@ const Model = function Model (name) {
     return klass
   }
 
+  klass.implement = function (operation, priority, fun) {
+    if (Model.$$operations.indexOf(operation) >= 0) {
+      if (typeof priority === 'function') {
+        fun = priority
+        priority = 500
+      }
+      if (typeof fun === 'function') {
+        fun[$$priority] = priority
+        if (!klass[operation]) {
+          klass[operation] = [fun]
+          addStorageCapabilities(klass, operation)
+        } else {
+          klass[operation].push(fun)
+          klass[operation].sort((a, b) => b[$$priority] - a[$$priority])
+        }
+      }
+    } else {
+      throw new ModelDefinitionException('invalid', `Implemented operation ${operation} is unknown`)
+    }
+    return klass
+  }
+
   klass.derive('clean', {cache: true}, function () {
     let data = {}
     for (let key in this.$data) {
@@ -227,18 +251,31 @@ const Model = function Model (name) {
 }
 
 Object.defineProperties(Model, {
-  $$findOne: {
-    value: Symbol('findOne'),
+  '$$findOne': {
+    value: Symbol.for('findOne'),
     __proto__: null
   },
-  $$findMany: {
-    value: Symbol('findMany'),
+  '$$findMany': {
+    value: Symbol.for('findMany'),
     __proto__: null
   },
-  $$store: {
-    value: Symbol('store'),
+  '$$store': {
+    value: Symbol.for('store'),
     __proto__: null
   },
+  '$$remove': {
+    value: Symbol.for('remove'),
+    __proto__: null
+  },
+
+  $$operations: {
+    get: function () {
+      return [
+        this.$$findOne, this.$$findMany, this.$$store, this.$$remove
+      ]
+    }
+  },
+
   DefinitionException: {
     value: ModelDefinitionException,
     __proto__: null
