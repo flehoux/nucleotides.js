@@ -93,6 +93,10 @@ module.exports = function Mixin (name) {
   }
   
   klass.implement = function (operation, priority, fn) {
+    if (typeof priority === 'function') {
+      fn = priority
+      priority = 500
+    }
     fn[Symbol.for('priority')] = priority
     if (klass[operation] == null) {
       klass[operation] = [fn]
