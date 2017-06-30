@@ -4,8 +4,6 @@ describe('A model defined with a storage implementation', function () {
   const {Model} = require('..')
   var storage = {}
 
-  console.log(Model.$$store)
-
   const Person = Model('Person')
     .attributes({
       nas: String,
