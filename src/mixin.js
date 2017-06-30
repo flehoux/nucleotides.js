@@ -115,7 +115,7 @@ module.exports = function Mixin (name) {
       if (mixin[operation] != null) {
         for (let fn in mixin[operation]) {
           model.implement(operation, function (...args) {
-            return fn.call(this, mixin, args...)
+            return fn.call(this, mixin, ...args)
           })
         }
       }
