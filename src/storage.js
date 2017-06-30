@@ -1,7 +1,7 @@
 const $$isNew = Symbol('isNew')
 
 function createFlowFor (key, ...args) {
-  const Model = require('./Model')
+  const Model = require('./model')
   const Flow = require('./flow')
   return new Flow(this[Model[key]], ...args)
 }
@@ -76,7 +76,7 @@ function doSave () {
 }
 
 module.exports = function addStorageCapabilities (klass, operation) {
-  let Model = require('./Model')
+  let Model = require('./model')
   var switcher = {
     [Model.$$findOne]: () => {
       klass.findOne = doFindOne
