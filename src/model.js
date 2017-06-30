@@ -7,7 +7,7 @@ const $$mixins = Symbol('mixins')
 const $$isModel = Symbol('isModel')
 const $$parents = Symbol('parents')
 const $$referenceTracker = Symbol('referenceTracker')
-const $$priority = Symbol('priority')
+const $$priority = Symbol.for('priority')
 
 const Attribute = require('./attribute')
 const DerivedProperty = require('./derived')
@@ -162,7 +162,7 @@ const Model = function Model (name) {
     if (Model.$$operations.indexOf(operation) >= 0) {
       if (typeof priority === 'function') {
         fun = priority
-        priority = 500
+        priority = fun[$$priority] || 500
       }
       if (typeof fun === 'function') {
         fun[$$priority] = priority

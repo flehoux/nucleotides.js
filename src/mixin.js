@@ -91,12 +91,35 @@ module.exports = function Mixin (name) {
     }
     return klass
   }
+  
+  klass.implement = function (operation, priority, fn) {
+    fn[Symbol.for('priority')] = priority
+    if (klass[operation] == null) {
+      klass[operation] = [fn]
+    } else {
+      klass[operation].push(fn)
+    }
+  }
 
   klass.prototype.augmentModel = function (model) {
     augmentWithDerivedProperties(this, model)
     augmentWithMethods(this, model)
     augmentWithClassMethods(this, model)
     augmentWithMixins(this, model)
+    augmentWithImplementations(this, model)
+  }
+  
+  function augmentWithImplementations (mixin, model) {
+    const { $$operations } = require('./model')
+    for (let operation in $$operations) {
+      if (mixin[operation] != null) {
+        for (let fn in mixin[operation]) {
+          model.implement(operation, function (...args) {
+            return fn.call(this, mixin, args...)
+          })
+        }
+      }
+    }
   }
 
   function augmentWithDerivedProperties (mixin, model) {
