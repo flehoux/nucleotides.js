@@ -204,8 +204,7 @@ const Model = function Model (name) {
       }
     }
     if (Object.keys(difference).length > 0) {
-      this.$emit('change', difference)
-      klass.$emit('change', this, difference)
+      this.$didChange(difference)
     }
   }
 
@@ -242,9 +241,14 @@ const Model = function Model (name) {
     for (let attributeName in klass.attributes()) {
       let attribute = klass.attribute(attributeName)
       if (Model.isModel(attribute.baseType, child) && attribute.containsInstance(this, child)) {
-        this.$emit('change', {[attributeName]: child})
+        this.$didChange({[attributeName]: child})
       }
     }
+  }
+
+  klass.prototype.$didChange = function (difference) {
+    this.$emit('change', difference)
+    klass.$emit('change', this, difference)
   }
 
   return klass

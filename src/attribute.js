@@ -164,9 +164,7 @@ class Attribute {
     Object.defineProperty(klass.prototype, this.name, {
       set: function (value) {
         if (attribute.maybeUpdate(this, value)) {
-          let difference = { [attribute.name]: this[attribute.name] }
-          this.$emit('change', difference)
-          klass.$emit('change', this, difference)
+          this.$didChange({[attribute.name]: this[attribute.name]})
         }
       },
       get: function () {
