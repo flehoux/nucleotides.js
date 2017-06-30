@@ -103,6 +103,7 @@ module.exports = function Mixin (name) {
     } else {
       klass[operation].push(fn)
     }
+    return klass
   }
 
   klass.prototype.augmentModel = function (model) {
