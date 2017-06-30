@@ -131,7 +131,7 @@ describe('A model define with a storage implementation', function () {
   
   const StorageMixin = Mixin('Storage')
     .implement(Model.$$store, function (mixin, flow, object) {
-      storage[object[mixin.key] = object.clean
+      storage[object[mixin.key]] = object.clean
       flow.resolve(true)
     })
     .implement(Model.$$findOne, function (mixin, flow, key) {
