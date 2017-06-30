@@ -1,6 +1,6 @@
 /* global describe it expect jasmine */
 
-describe('A model define with a storage implementation', function () {
+describe('A model defined with a storage implementation', function () {
   const {Model} = require('..')
   var storage = {}
 
@@ -125,7 +125,7 @@ describe('A model define with a storage implementation', function () {
   })
 })
 
-describe('A model define with a storage implementation', function () {
+describe('A model using a mixin that defines a storage implementation', function () {
   const {Model, Mixin} = require('..')
   var storage = {}
   

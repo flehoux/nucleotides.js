@@ -116,9 +116,12 @@ module.exports = function Mixin (name) {
   
   function augmentWithImplementations (mixin, model) {
     const { $$operations } = require('./model')
+    console.log($$operations)
     for (let operation of $$operations) {
+      console.log(operation, mixin[operation])
       if (mixin[operation] != null) {
         for (let fn of mixin[operation]) {
+          console.log(operation, fn)
           model.implement(operation, function (...args) {
             return fn.call(this, mixin, ...args)
           })
