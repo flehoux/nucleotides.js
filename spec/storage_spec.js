@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A model defined with a storage implementation', function () {
-  const {Model} = require('..')
+  const {Model, Storage} = require('..')
   var storage = {}
 
   const Person = Model('Person')
@@ -10,14 +10,14 @@ describe('A model defined with a storage implementation', function () {
       firstName: String,
       lastName: String
     })
-    .implement(Model.$$store, function (flow, object) {
+    .implement(Storage.$$store, function (flow, object) {
       storage[object.nas] = object.clean
       flow.resolve(true)
     })
-    .implement(Model.$$findOne, function (flow, nas) {
+    .implement(Storage.$$findOne, function (flow, nas) {
       flow.resolve(storage[nas])
     })
-    .implement(Model.$$findMany, function (flow, lastName) {
+    .implement(Storage.$$findMany, function (flow, lastName) {
       let result = []
       for (let nas in storage) {
         let object = storage[nas]
@@ -27,7 +27,7 @@ describe('A model defined with a storage implementation', function () {
       }
       flow.resolve(result)
     })
-    .implement(Model.$$remove, function (flow, object) {
+    .implement(Storage.$$remove, function (flow, object) {
       delete storage[object.nas]
       flow.resolve(true)
     })
@@ -124,18 +124,18 @@ describe('A model defined with a storage implementation', function () {
 })
 
 describe('A model using a mixin that defines a storage implementation', function () {
-  const {Model, Mixin} = require('..')
+  const {Model, Mixin, Storage} = require('..')
   var storage = {}
-  
+
   const StorageMixin = Mixin('Storage')
-    .implement(Model.$$store, function (mixin, flow, object) {
+    .implement(Storage.$$store, function (mixin, flow, object) {
       storage[object[mixin.key]] = object.clean
       flow.resolve(true)
     })
-    .implement(Model.$$findOne, function (mixin, flow, key) {
+    .implement(Storage.$$findOne, function (mixin, flow, key) {
       flow.resolve(storage[key])
     })
-    .implement(Model.$$findMany, function (mixin, flow, key) {
+    .implement(Storage.$$findMany, function (mixin, flow, key) {
       let result = []
       for (let pkey in storage) {
         let object = storage[pkey]
@@ -145,11 +145,11 @@ describe('A model using a mixin that defines a storage implementation', function
       }
       flow.resolve(result)
     })
-    .implement(Model.$$remove, function (mixin, flow, object) {
+    .implement(Storage.$$remove, function (mixin, flow, object) {
       delete storage[object[mixin.key]]
       flow.resolve(true)
     })
-  
+
   const Person = Model('Person')
     .attributes({
       nas: String,

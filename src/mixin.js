@@ -91,7 +91,7 @@ module.exports = function Mixin (name) {
     }
     return klass
   }
-  
+
   klass.implement = function (operation, priority, fn) {
     if (typeof priority === 'function') {
       fn = priority
@@ -113,10 +113,10 @@ module.exports = function Mixin (name) {
     augmentWithMixins(this, model)
     augmentWithImplementations(this, model)
   }
-  
+
   function augmentWithImplementations (mixin, model) {
-    const { $$operations } = require('./model')
-    for (let operation of $$operations) {
+    const Storage = require('./storage')
+    for (let operation of Storage.$$operations) {
       if (klass[operation] != null) {
         for (let fn of klass[operation]) {
           model.implement(operation, function (...args) {

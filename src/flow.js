@@ -6,6 +6,9 @@ const $$flow = Symbol('flow')
 
 class Flow {
   constructor (functions, ...args) {
+    if (functions == null) {
+      throw new Error("A Flow object can't be created without a list of functions as first argument")
+    }
     this.stack = functions
     this.args = args
     this.result = null
