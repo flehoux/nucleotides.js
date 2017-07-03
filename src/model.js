@@ -173,7 +173,7 @@ const Model = function Model (name) {
     if (Storage.$$operations.indexOf(operation) >= 0) {
       if (typeof priority === 'function') {
         fun = priority
-        priority = fun[$$priority] || 500
+        priority = fun[$$priority] || Storage.MEDIUM
       }
       if (typeof fun === 'function') {
         fun[$$priority] = priority

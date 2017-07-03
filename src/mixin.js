@@ -93,9 +93,10 @@ module.exports = function Mixin (name) {
   }
 
   klass.implement = function (operation, priority, fn) {
+    const Storage = require('./storage')
     if (typeof priority === 'function') {
       fn = priority
-      priority = 500
+      priority = Storage.MEDIUM
     }
     fn[Symbol.for('priority')] = priority
     if (klass[operation] == null) {

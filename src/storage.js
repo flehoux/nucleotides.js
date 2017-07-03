@@ -123,6 +123,11 @@ const Storage = {
     Symbol.for('store'),
     Symbol.for('remove')
   ],
+
+  LOW: 250,
+  MEDIUM: 500,
+  HIGH: 1000,
+
   augmentModel: function (klass, operation) {
     var switcher = {
       [Storage.$$findOne]: () => {
