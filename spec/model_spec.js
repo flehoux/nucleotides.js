@@ -251,16 +251,18 @@ describe('A Model with simple class methods', function () {
     .attributes({
       firstName: String,
       lastName: {
-        base: String,
+        type: String,
         initial: 'Smith'
       }
     })
-    .classMethod('create', function (...args) {
-      return Reflect.construct(this, args)
+    .classMethod('createSmith', function (data) {
+      data.lastName = 'Smith'
+      return Reflect.construct(this, [data])
     })
 
   it('should expose the class methods for execution', function () {
-    var p = Person.create({firstName: 'John'})
+    var p = Person.createSmith({firstName: 'John'})
     expect(p.firstName).toBe('John')
+    expect(p.lastName).toBe('Smith')
   })
 })

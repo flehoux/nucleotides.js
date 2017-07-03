@@ -20,6 +20,9 @@ function ModelDefinitionException (code, message, value) {
   this.value = value
 }
 
+ModelDefinitionException.prototype = Object.create(Error.prototype)
+ModelDefinitionException.prototype.constructor = ModelDefinitionException
+
 const Model = function Model (name) {
   const klass = function (...args) {
     this[$$data] = {}

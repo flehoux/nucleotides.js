@@ -9,7 +9,10 @@ function AttributeDefinitionException (code, message, value) {
   this.value = value
 }
 
-function generatorForBaseType (type) {
+AttributeDefinitionException.prototype = Object.create(Error.prototype)
+AttributeDefinitionException.prototype.constructor = AttributeDefinitionException
+
+function generatorForBaseType (attribute, type) {
   let Model = require('./model')
   if (type === String) {
     return (value) => value.toString()
@@ -38,6 +41,8 @@ function generatorForBaseType (type) {
         return Reflect.construct(type, args)
       }
     }
+  } else {
+    throw new AttributeDefinitionException('type', `Attribute ${attribute.name} is being defined without a proper type`, type)
   }
 }
 

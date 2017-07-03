@@ -6,6 +6,9 @@ function DerivedDefinitionException (code, message, value) {
   this.value = value
 }
 
+DerivedDefinitionException.prototype = Object.create(Error.prototype)
+DerivedDefinitionException.prototype.constructor = DerivedDefinitionException
+
 class DerivedProperty {
   constructor (name, options, getter) {
     if (typeof options === 'function') {
