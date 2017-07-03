@@ -1,4 +1,4 @@
-/* global describe it expect jasmine */
+/* global describe it expect */
 
 describe('A simple Model modified using the DifferenceMixin', function () {
   const { Model, Storage } = require('../..')
