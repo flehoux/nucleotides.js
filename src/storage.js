@@ -88,8 +88,11 @@ function doCreate (...args) {
 
 function doSave () {
   let promise = createFlowFor.call(this.constructor, '$$store', this).run()
-  promise.then(() => { this.$isNew = false })
-  return promise
+  return promise.then(() => {
+    this.$isNew = false
+    this.$emit('saved')
+    this.constructor.$emit('saved', this)
+  })
 }
 
 class Success {

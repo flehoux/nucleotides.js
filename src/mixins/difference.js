@@ -1,5 +1,6 @@
 const {Mixin} = require('../..')
 const $$difference = Symbol('difference')
+
 const DifferenceMixin = Mixin('DifferenceMixin')
   .construct(function (options = {}) {
     let {exclude = []} = options
@@ -40,8 +41,9 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
 
 DifferenceMixin.$on('use', function (mixin, model) {
   model.$on('new', (object) => object.$setPristine())
+  model.$on('saved', (object) => object.$setPristine())
   model.$on('change', function (object, diff) {
-    mixin.mergeDifference(model, object, object[$$difference], diff)
+    mixin.mergeDifference(this, object, object[$$difference], diff)
   })
 })
 
