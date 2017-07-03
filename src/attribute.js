@@ -2,6 +2,7 @@
 
 const $$type = Symbol('type')
 const $$generator = Symbol('generator')
+const EmittingArray = require('./emitting_array')
 
 function AttributeDefinitionException (code, message, value) {
   this.code = code
@@ -106,45 +107,79 @@ class Attribute {
 
     if (Attribute.allowsBaseType(typeDefinition)) {
       this.baseType = typeDefinition
-      this[$$generator] = generatorForBaseType(typeDefinition)
+      this[$$generator] = generatorForBaseType(this, typeDefinition)
     } else if (Attribute.allowsBaseType(typeDefinition.base)) {
       this.baseType = typeDefinition.base
       if (typeof typeDefinition.generator === 'function') {
         this[$$generator] = typeDefinition.generator
       } else {
-        this[$$generator] = generatorForBaseType(typeDefinition)
+        this[$$generator] = generatorForBaseType(this, typeDefinition)
       }
     }
   }
 
-  maybeUpdate (object, value) {
+  augmentModel (klass) {
+    let attribute = this
+    Object.defineProperty(klass.prototype, this.name, {
+      set: function (value) {
+        if (attribute.updateInTarget(this, value) && !this.collection) {
+          this.$didChange({[attribute.name]: this[attribute.name]})
+        }
+      },
+      get: function () {
+        return this.$data[attribute.name]
+      }
+    })
+    klass.$on('creating', function (object) {
+      object.$setTracker(attribute.name, Symbol(`attributes:${attribute.name}`))
+      attribute.initializeInTarget(object)
+    })
+  }
+
+  initializeInTarget (object) {
+    let value
+    if (typeof this.initial === 'function') {
+      value = this.initial()
+    } else if (this.initial != null) {
+      value = this.initial
+    }
     if (this.collection) {
-      let nextValue
-      if (value != null) {
-        if (typeof value[Symbol.iterator] === 'function') {
-          nextValue = []
-          for (let item of value) {
-            nextValue.push(this.generator(item))
-          }
+      this.initializeArrayInTarget(object, value)
+    } else if (value != null) {
+      this.updateInTarget(object, value)
+    }
+  }
+
+  initializeArrayInTarget (object, value) {
+    let array = EmittingArray.create()
+    let attribute = this
+
+    object.$data[this.name] = array
+    if (this.isModel) {
+      array.$on('add', function (elements) {
+        for (let item of elements) {
+          item.$addParent(object, object.$tracker(attribute.name))
         }
-      }
-      let oldValue = object.$data[this.name]
-      if (this.isModel && oldValue != null) {
-        for (let item of oldValue) {
-          if (nextValue == null || nextValue.indexOf(item) < 0) {
-            item.$removeParent(object, object.$tracker(this.name))
-          }
+      })
+      array.$on('remove', function (elements) {
+        for (let item of elements) {
+          item.$removeParent(object, object.$tracker(attribute.name))
         }
-      }
-      object.$data[this.name] = nextValue
-      if (this.isModel && nextValue != null) {
-        for (let item of nextValue) {
-          if (oldValue == null || oldValue.indexOf(item) < 0) {
-            item.$addParent(object, object.$tracker(this.name))
-          }
-        }
-      }
-      return true
+      })
+    }
+
+    this.updateInTarget(object, value)
+    let listener = function (operation, items) {
+      object.$didChange({[attribute.name]: {[operation]: items}})
+    }
+    array.$on('add', listener.bind(array, 'added'))
+    array.$on('remove', listener.bind(array, 'removed'))
+  }
+
+  updateInTarget (object, value) {
+    if (this.collection) {
+      this.updateArrayInTarget(object, value)
+      return false
     } else {
       let nextValue = this.generator(value)
       if (object.$data[this.name] !== nextValue) {
@@ -163,41 +198,24 @@ class Attribute {
     }
   }
 
-  augmentModel (klass) {
-    let attribute = this
-
-    Object.defineProperty(klass.prototype, this.name, {
-      set: function (value) {
-        if (attribute.maybeUpdate(this, value)) {
-          this.$didChange({[attribute.name]: this[attribute.name]})
+  updateArrayInTarget (object, value) {
+    let currentItems = object.$data[this.name]
+    let newItems = []
+    if (value != null) {
+      if (typeof value[Symbol.iterator] === 'function') {
+        for (let item of value) {
+          newItems.push(this.generator(item))
         }
-      },
-      get: function () {
-        return this.$data[attribute.name]
+      } else {
+        newItems.push(this.generator(value))
       }
-    })
-
-    klass.$on('new', function (object) {
-      if (object.$data[attribute.name] == null) {
-        attribute.initializeIn(object)
-      }
-      object.$setTracker(attribute.name, Symbol(`Attribute(${attribute.name})`))
-    })
-  }
-
-  initializeIn (object) {
-    if (typeof this.initial === 'function') {
-      object.$data[this.name] = this.initial()
-    } else if (this.initial != null) {
-      object.$data[this.name] = this.initial
-    } else {
-      object.$data[this.name] = null
     }
+    currentItems.splice(0, currentItems.length, ...newItems)
   }
 
-  containsInstance (parent, child) {
+  constainsModelInstance (parent, child) {
     if (this.collection) {
-      return parent.$data[this.name] && parent.$data[this.name].indexOf(child) >= 0
+      return parent.$data[this.name].includes(child)
     } else {
       return parent.$data[this.name] === child
     }

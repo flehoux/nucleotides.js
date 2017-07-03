@@ -29,11 +29,12 @@ const Model = function Model (name) {
     this[$$parents] = {}
     this[$$referenceTracker] = {}
 
+    klass.$emit('creating', this)
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
     this.$on('change', function (diff) {
-      for (let parentKey in this[$$parents]) {
-        this[$$parents][parentKey].$childDidChange(this)
+      for (let parentKey of this.$parents) {
+        this[$$parents][parentKey].$childDidChange(this, diff)
       }
     })
   }
@@ -60,6 +61,13 @@ const Model = function Model (name) {
       }
     }
   })
+  Object.defineProperties(klass.prototype, {
+    $parents: {
+      get: function () {
+        return Object.getOwnPropertySymbols(this[$$parents])
+      }
+    }
+  })
 
   makeEmitter(klass)
   makeEmitter(klass.prototype)
@@ -70,7 +78,7 @@ const Model = function Model (name) {
     for (let attributeName in klass[$$attributes]) {
       let attribute = klass[$$attributes][attributeName]
       if (data[attributeName] != null) {
-        attribute.maybeUpdate(this, data[attributeName])
+        attribute.updateInTarget(this, data[attributeName])
       }
     }
   }
@@ -201,7 +209,7 @@ const Model = function Model (name) {
     for (let attributeName in data) {
       if (attributeName in klass.attributes()) {
         let attribute = klass.attribute(attributeName)
-        if (attribute.maybeUpdate(this, data[attributeName])) {
+        if (attribute.updateInTarget(this, data[attributeName])) {
           difference[attributeName] = this[attributeName]
         }
       }
@@ -240,11 +248,11 @@ const Model = function Model (name) {
     }
   }
 
-  klass.prototype.$childDidChange = function (child) {
+  klass.prototype.$childDidChange = function (child, diff) {
     for (let attributeName in klass.attributes()) {
       let attribute = klass.attribute(attributeName)
-      if (Model.isModel(attribute.baseType, child) && attribute.containsInstance(this, child)) {
-        this.$didChange({[attributeName]: child})
+      if (Model.isModel(attribute.baseType, child) && attribute.constainsModelInstance(this, child)) {
+        this.$didChange({[attribute.name]: diff})
       }
     }
   }

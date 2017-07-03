@@ -162,7 +162,7 @@ describe('A Model with an attribute typed as another Model', function () {
         first: 'John',
         last: '2'
       },
-      emails: null,
+      emails: [],
       birthdate: new Date(527817600000)
     })
   })
@@ -207,14 +207,19 @@ describe('A Model with an attribute typed as another Model', function () {
     })
 
     expect(person.emails[0]).toEqual(jasmine.any(Email))
+    expect(person.emails[0].user).toBe('john')
     expect(person.emails[0].domain).toBe('smith.org')
+    expect(person.emails[0].full).toBe('john@smith.org')
+
     expect(person.emails[1]).toEqual(jasmine.any(Email))
     expect(person.emails[1].user).toBe('johnsmith')
-    expect(person.emails[0].full).toBe('john@smith.org')
+    expect(person.emails[1].domain).toBe('gmail.com')
+    expect(person.emails[1].full).toBe('johnsmith@gmail.com')
   })
 
   it('should bubble up \'change\' events from a list of nested models', function (done) {
     var spy = jasmine.createSpy()
+
     var person = new Person({
       name: {
         first: 'John',
@@ -241,6 +246,32 @@ describe('A Model with an attribute typed as another Model', function () {
         expect(spy.calls.count()).toBe(1)
         done()
       }, 0)
+    }, 0)
+  })
+
+  it('should bubble up \'change\' events when elements of a \'list\' attribute are manually replaced', function (done) {
+    var spy = jasmine.createSpy()
+
+    var person = new Person({
+      name: {
+        first: 'John',
+        last: 'Smith'
+      },
+      emails: ['johnsmith@gmail.com']
+    })
+
+    person.$on('change', spy)
+
+    let email = new Email('john@smith.org')
+    person.emails[0] = email
+
+    setTimeout(function () {
+      expect(spy.calls.count()).toBe(2)
+      expect(spy.calls.argsFor(0)[0].emails.removed[0]).toEqual(jasmine.any(Email))
+      expect(spy.calls.argsFor(0)[0].emails.removed[0].user).toBe('johnsmith')
+      expect(spy.calls.argsFor(1)[0].emails.added[0]).toEqual(jasmine.any(Email))
+      expect(spy.calls.argsFor(1)[0].emails.added[0].user).toBe('john')
+      done()
     }, 0)
   })
 })
