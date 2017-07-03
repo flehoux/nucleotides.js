@@ -1,8 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A simple Model modified using the DifferenceMixin', function () {
-  const { Model, Storage } = require('../..')
-  const AutoUpdateMixin = require('../../src/mixins/auto_update')
+  const { Model, Storage, Mixin } = require('../..')
 
   const storage = {}
 
@@ -22,7 +21,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       flow.resolve(storage[nas])
     })
     .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
-    .use(new AutoUpdateMixin({id: 'nas'}))
+    .use(new Mixin.AutoUpdate({id: 'nas'}))
 
   it('should propagate saved updates to objects sharing the same ID', function (done) {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: '1' })
