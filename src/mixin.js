@@ -14,7 +14,7 @@ const DerivedProperty = require('./derived')
 
 const makeEmitter = require('./emitter')
 
-module.exports = function Mixin (name) {
+function Mixin (name) {
   const klass = function (...args) {
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
@@ -177,3 +177,13 @@ module.exports = function Mixin (name) {
 
   return klass
 }
+
+class MixinError extends Error {
+  constructor (message, mixin) {
+    super(message)
+    this.mixin = mixin
+  }
+}
+Mixin.Error = MixinError
+
+module.exports = Mixin
