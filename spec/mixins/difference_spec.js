@@ -1,8 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A simple Model modified using the DifferenceMixin', function () {
-  const { Model } = require('../..')
-  const DifferenceMixin = require('../../src/mixins/difference')
+  const { Model, Mixin } = require('../..')
 
   const Person = Model('Person')
     .attributes({
@@ -11,7 +10,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       age: Number,
       emails: [String]
     })
-    .use(new DifferenceMixin({exclude: ['age']}))
+    .use(new Mixin.Difference({exclude: ['age']}))
 
   it('should initially have an empty difference', function () {
     var p = new Person()
@@ -83,8 +82,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
 })
 
 describe('A Model with nested models, modified using the DifferenceMixin', function () {
-  const { Model } = require('../..')
-  const DifferenceMixin = require('../../src/mixins/difference')
+  const { Model, Mixin } = require('../..')
 
   var Name = Model('Name')
       .attributes({
@@ -113,7 +111,7 @@ describe('A Model with nested models, modified using the DifferenceMixin', funct
         birthdate: Date,
         emails: [Email]
       })
-      .use(new DifferenceMixin({}))
+      .use(new Mixin.Difference({}))
 
   it('should report simplified changes to a single nested model', function () {
     var p = new Person({name: {first: 'John', last: 'Smith'}})
