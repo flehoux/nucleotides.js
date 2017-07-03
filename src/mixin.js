@@ -129,7 +129,7 @@ module.exports = function Mixin (name) {
 
   function augmentWithDerivedProperties (mixin, model) {
     for (let derivedArgs of klass[$$derivedProperties]) {
-      var { name, options, getter } = derivedArgs
+      let { name, options, getter } = derivedArgs
       if (typeof options === 'function') {
         getter = options
         options = {}
