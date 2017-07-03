@@ -120,7 +120,7 @@ function Mixin (name) {
     for (let operation of Storage.$$operations) {
       if (klass[operation] != null) {
         for (let fn of klass[operation]) {
-          model.implement(operation, function (...args) {
+          model.implement(operation, fn[Symbol.for('priority')], function (...args) {
             return fn.call(this, mixin, ...args)
           })
         }
