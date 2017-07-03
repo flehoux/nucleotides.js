@@ -1,4 +1,4 @@
-/* global describe it expect */
+/* global describe it expect jasmine */
 
 describe('A simple Model modified using the DifferenceMixin', function () {
   const { Model, Storage } = require('../..')
@@ -80,7 +80,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
           inst1.firstName = 'Bob'
           inst1.save().then(function () {
             expect(inst2.fullName).toBe('Bob Smith')
-            delete storage['2']
+            delete storage['3']
             done()
           })
         })
@@ -89,12 +89,12 @@ describe('A simple Model modified using the DifferenceMixin', function () {
   })
 
   it('should not propagate saved updates to objects if callback yields false asynchronously', function (done) {
-    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: '3' })
+    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: '4' })
 
     expect(inst1.$isNew).toBe(true)
     inst1.save().then(function () {
       expect(inst1.$isNew).toBe(false)
-      Person.findOne('3').then(function (inst2) {
+      Person.findOne('4').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         inst2.autoUpdate(function ({firstName}) {
           return new Promise(function (resolve) {
@@ -107,7 +107,37 @@ describe('A simple Model modified using the DifferenceMixin', function () {
           inst1.firstName = 'Bob'
           inst1.save().then(function () {
             expect(inst2.fullName).toBe('Bob Smith')
-            delete storage['2']
+            delete storage['4']
+            done()
+          })
+        })
+      })
+    })
+  })
+
+  it('should trigger \'change\' events on other objects sharing the same ID', function (done) {
+    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: '5' })
+    let spy = jasmine.createSpy()
+
+    expect(inst1.$isNew).toBe(true)
+    inst1.save().then(function () {
+      expect(inst1.$isNew).toBe(false)
+      Person.findOne('5').then(function (inst2) {
+        expect(inst2.fullName).toBe('John Smith')
+        inst2.autoUpdate()
+        inst2.$on('change', spy)
+        inst1.firstName = 'Larry'
+        inst1.save().then(function () {
+          expect(spy.calls.count()).toBe(1)
+          expect(spy.calls.argsFor(0)[0].firstName).toBe('Larry')
+          expect(inst2.firstName).toBe('Larry')
+
+          inst2.firstName = 'John'
+          spy.calls.reset()
+
+          inst2.save().then(function () {
+            expect(spy.calls.count()).toBe(0)
+            delete storage['5']
             done()
           })
         })

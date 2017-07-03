@@ -123,6 +123,7 @@ describe('A Model with nested models, modified using the DifferenceMixin', funct
     expect(p.$difference.name).not.toEqual(jasmine.any(Name))
     expect(p.$isPristine).toBe(false)
   })
+
   it('should report simplified changes to a single nested model', function () {
     var p = new Person({name: {first: 'John', last: 'Smith'}})
 

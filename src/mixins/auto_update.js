@@ -18,6 +18,7 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
     let self = this
     if (typeof conditional === 'function') {
       listen = function (committed) {
+        if (self === committed) return
         let clean = committed.clean
         let response = conditional.call(self, clean)
         if (response === true) {
@@ -34,6 +35,7 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
       }
     } else {
       listen = function (committed) {
+        if (self === committed) return
         self.$updateAttributes(committed.clean)
       }
     }
