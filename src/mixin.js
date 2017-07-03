@@ -132,8 +132,12 @@ module.exports = function Mixin (name) {
     for (let derivedArgs of klass[$$derivedProperties]) {
       let { name, options, getter } = derivedArgs
       if (typeof options === 'function') {
-        getter = options
-        options = {}
+        if (typeof getter === 'function') {
+          options = options.call(model, mixin)
+        } else {
+          getter = options
+          options = {}
+        }
       }
 
       let derived = new DerivedProperty(name, options, function (...args) {
