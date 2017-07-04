@@ -1,4 +1,5 @@
 module.exports = {
-  AutoUpdateMixin: require('./auto_update'),
-  DifferenceMixin: require('./difference')
+  AutoUpdate: require('./auto_update'),
+  Difference: require('./difference'),
+  Angular: require('./angular')
 }
