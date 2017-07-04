@@ -9,8 +9,8 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
     delete options.id
     this.options = options
   })
-  .implement(Storage.$$store, 2000, function (mixin, flow, object) {
-    object.constructor.$emit(mixin.eventKey(object), object)
+  .implement(Storage.$$store, 2000, function (mixin, flow) {
+    this.constructor.$emit(mixin.eventKey(this), this)
     return flow.next()
   })
   .method('autoUpdate', function (mixin, conditional) {

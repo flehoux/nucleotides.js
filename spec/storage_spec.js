@@ -10,8 +10,8 @@ describe('A model defined with a storage implementation', function () {
       firstName: String,
       lastName: String
     })
-    .implement(Storage.$$store, function (flow, object) {
-      storage[object.nas] = object.clean
+    .implement(Storage.$$store, function (flow) {
+      storage[this.nas] = this.clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (flow, nas) {
@@ -27,8 +27,8 @@ describe('A model defined with a storage implementation', function () {
       }
       flow.resolve(result)
     })
-    .implement(Storage.$$remove, function (flow, object) {
-      delete storage[object.nas]
+    .implement(Storage.$$remove, function (flow) {
+      delete storage[this.nas]
       flow.resolve(true)
     })
 
@@ -128,8 +128,8 @@ describe('A model using a mixin that defines a storage implementation', function
   var storage = {}
 
   const StorageMixin = Mixin('Storage')
-    .implement(Storage.$$store, function (mixin, flow, object) {
-      storage[object[mixin.key]] = object.clean
+    .implement(Storage.$$store, function (mixin, flow) {
+      storage[this[mixin.key]] = this.clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (mixin, flow, key) {
@@ -145,8 +145,8 @@ describe('A model using a mixin that defines a storage implementation', function
       }
       flow.resolve(result)
     })
-    .implement(Storage.$$remove, function (mixin, flow, object) {
-      delete storage[object[mixin.key]]
+    .implement(Storage.$$remove, function (mixin, flow) {
+      delete storage[this[mixin.key]]
       flow.resolve(true)
     })
 

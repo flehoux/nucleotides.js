@@ -1,13 +1,14 @@
 const $$isNew = Symbol('isNew')
 
-function createFlowFor (key, ...args) {
+function createFlowFor (fns, ...args) {
   const Flow = require('./flow')
-  return new Flow(this[Storage[key]], ...args)
+  fns = fns.map((fn) => fn.bind(this))
+  return new Flow(fns, ...args)
 }
 
 function ensureInstance (response) {
   let value
-  if (response instanceof Storage.Success) {
+  if (response instanceof Success) {
     value = response.result
   } else {
     value = response
@@ -15,7 +16,7 @@ function ensureInstance (response) {
   if (!(value instanceof this)) {
     value = Reflect.construct(this, [value])
   }
-  if (response instanceof Storage.Success) {
+  if (response instanceof Success) {
     value.$response = response
   }
   value.$isNew = false
@@ -25,7 +26,7 @@ function ensureInstance (response) {
 function ensureListOfInstance (response) {
   let result = []
   let values
-  if (response instanceof Storage.Success) {
+  if (response instanceof Success) {
     values = response.result
   } else {
     values = response
@@ -33,14 +34,14 @@ function ensureListOfInstance (response) {
   for (let item of values) {
     result.push(ensureInstance.call(this, item))
   }
-  if (response instanceof Storage.Success) {
+  if (response instanceof Success) {
     result.$response = response
   }
   return result
 }
 
 function doFindOne (...args) {
-  let flow = createFlowFor.call(this, '$$findOne', ...args)
+  let flow = createFlowFor.call(this, this[Storage.$$findOne], ...args)
   let promise = flow.run()
   if (flow.successful) {
     let result = ensureInstance.call(this, flow.resolved)
@@ -53,7 +54,7 @@ function doFindOne (...args) {
 }
 
 function doFindMany (...args) {
-  let flow = createFlowFor.call(this, '$$findMany', ...args)
+  let flow = createFlowFor.call(this, this[Storage.$$findMany], ...args)
   let promise = flow.run()
   if (flow.successful) {
     let result = ensureListOfInstance.call(this, flow.resolved)
@@ -65,8 +66,8 @@ function doFindMany (...args) {
   }
 }
 
-function doDelete () {
-  return createFlowFor.call(this.constructor, '$$remove', this).run()
+function doDelete (...args) {
+  return createFlowFor.call(this, this.constructor[Storage.$$remove], ...args).run()
 }
 
 function doCreate (...args) {
@@ -77,7 +78,7 @@ function doCreate (...args) {
   }
   let object = Reflect.construct(this, args)
   if (options.autoSave === true) {
-    let promise = object.save().then(function () {
+    let promise = object.save().then(function (resp) {
       return object
     })
     promise.$result = object
@@ -86,12 +87,16 @@ function doCreate (...args) {
   return object
 }
 
-function doSave () {
-  let promise = createFlowFor.call(this.constructor, '$$store', this).run()
-  return promise.then(() => {
+function doSave (...args) {
+  let promise = createFlowFor.call(this, this.constructor[Storage.$$store], ...args).run()
+  return promise.then((resp) => {
     this.$isNew = false
     this.$emit('saved')
     this.constructor.$emit('saved', this)
+
+    let res = ensureInstance.call(this.constructor, resp)
+    this.$response = res.$response
+    return this
   })
 }
 

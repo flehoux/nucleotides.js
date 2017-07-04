@@ -13,8 +13,8 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       nas: String,
       emails: [String]
     })
-    .implement(Storage.$$store, function (flow, object) {
-      storage[object.nas] = object.clean
+    .implement(Storage.$$store, function (flow) {
+      storage[this.nas] = this.clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (flow, nas) {

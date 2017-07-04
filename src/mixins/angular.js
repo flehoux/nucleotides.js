@@ -1,16 +1,15 @@
 const {Mixin, Storage} = require('../..')
 const [GET, POST, PUT, DELETE] = ['GET', 'POST', 'PUT', 'DELETE']
 
-function buildRequest (mixin, method, object) {
-  let url
-  if (typeof mixin.baseUrl === 'function') {
-    url = mixin.baseUrl.call(object, mixin, method)
-  } else if (typeof mixin.baseUrl === 'string') {
-    if (method !== POST) {
-      url = mixin.baseUrl + object[mixin.idKey]
-    }
+function buildRequest (mixin, method, object, params) {
+  let url = mixin.getUrl(method, object, params)
+  let options = Object.assign({}, mixin.options, {url, method})
+
+  if (method === POST || method === PUT) {
+    options.data = object.clean
   }
-  let options = Object.assign({url, method}, mixin.options)
+  options.params = params
+
   return mixin.$http(options)
 }
 
@@ -23,7 +22,7 @@ function normalizeAngularResponse (mixin, model, response, generate = false) {
           return Reflect.construct(model, [object])
         })
       } else {
-        result = Reflect.construct(model, [response.dataa])
+        result = Reflect.construct(model, [response.data])
       }
     } else {
       result = response.data
@@ -34,50 +33,54 @@ function normalizeAngularResponse (mixin, model, response, generate = false) {
   }
 }
 
-function store (mixin, flow) {
+function store (mixin, flow, params) {
   if (this.$isNew) {
-    buildRequest(mixin, POST, this).then(
+    buildRequest(mixin, POST, this, params).then(
       (response) => {
-        mixin.flow.resolve(normalizeAngularResponse(mixin, null, response))
+        let resp = normalizeAngularResponse(mixin, null, response)
+        if (resp.data != null && resp.data.data != null && resp.data.data[mixin.idKey] != null) {
+          this[mixin.idKey] = resp.data.data[mixin.idKey]
+        }
+        flow.resolve(resp)
       },
       (response) => {
-        mixin.flow.reject(normalizeAngularResponse(mixin, null, response))
+        flow.reject(normalizeAngularResponse(mixin, null, response))
       }
     )
   } else {
-    buildRequest(mixin, PUT, this).then(
+    buildRequest(mixin, PUT, this, params).then(
       (response) => {
-        mixin.flow.resolve(normalizeAngularResponse(mixin, null, response))
+        flow.resolve(normalizeAngularResponse(mixin, null, response))
       },
       (response) => {
-        mixin.flow.reject(normalizeAngularResponse(mixin, null, response))
+        flow.reject(normalizeAngularResponse(mixin, null, response))
       }
     )
   }
 }
 
-function remove (mixin, flow) {
-  buildRequest(mixin, DELETE, this).then(
+function remove (mixin, flow, params) {
+  buildRequest(mixin, DELETE, this, params).then(
     (response) => {
-      mixin.flow.resolve(normalizeAngularResponse(mixin, null, response))
+      flow.resolve(normalizeAngularResponse(mixin, null, response))
     },
     (response) => {
-      mixin.flow.reject(normalizeAngularResponse(mixin, null, response))
+      flow.reject(normalizeAngularResponse(mixin, null, response))
     }
   )
 }
 
-function findOne (mixin, flow, arg) {
-  if (arg === null) {
+function findOne (mixin, flow, object, params) {
+  if (object === null) {
     throw new Mixin.Error('You need to provide a key that will be used to find a single object', mixin)
   }
-  if (typeof arg === 'number') {
-    arg = arg.toString()
+  if (typeof object === 'number') {
+    object = object.toString()
   }
-  if (typeof arg === 'string' && mixin.idKey) {
-    arg = {[mixin.idKey]: arg}
+  if (typeof object === 'string' && mixin.idKey) {
+    object = {[mixin.idKey]: object}
   }
-  buildRequest(mixin, GET, arg).then(
+  buildRequest(mixin, GET, object, params).then(
     (response) => {
       flow.resolve(normalizeAngularResponse(mixin, this, response, true))
     },
@@ -91,10 +94,11 @@ function findMany (mixin, flow, params = {}) {
   let url = mixin.baseUrl
   if (params === null) {
     params = {}
-  } else if (typeof params === 'string') {
+  } else if (typeof params === 'string' && typeof url === 'string') {
     url = url + params
+    params = {}
   }
-  buildRequest(mixin, GET, params, {url}).then(
+  buildRequest(mixin, GET, null, params).then(
     (response) => {
       flow.resolve(normalizeAngularResponse(mixin, this, response, true))
     },
@@ -104,22 +108,26 @@ function findMany (mixin, flow, params = {}) {
   )
 }
 
-module.exports = Mixin('AngularHTTPService')
+var AngularHttpMixin = Mixin('AngularHttpMixin')
   .construct(function (options) {
     let {$http, url, id} = options
-    if ($http == null || typeof $http !== 'object') {
-      throw new Mixin.Error('The AngularHTTPService mixin requires the \'$http\' option', this)
+
+    if ($http == null || typeof $http !== 'function') {
+      throw new Mixin.Error('The AngularHttpMixin mixin requires the \'$http\' option', this)
     }
-    if (url == null) {
-      throw new Mixin.Error('The AngularHTTPService mixin requires the \'url\' option', this)
-    } else if (typeof url === 'string') {
+
+    if (typeof url === 'string') {
       if (url.slice(-1) !== '/') {
         url = url + '/'
       }
-      if (id == null) {
-        id = 'id'
-      }
+    } else {
+      throw new Mixin.Error('The AngularHttpMixin mixin requires the \'url\' option', this)
     }
+
+    if (typeof id !== 'string') {
+      id = 'id'
+    }
+
     this.$http = $http
     this.baseUrl = url
     this.idKey = id
@@ -132,3 +140,19 @@ module.exports = Mixin('AngularHTTPService')
   .implement(Storage.$$remove, remove)
   .implement(Storage.$$findOne, findOne)
   .implement(Storage.$$findMany, findMany)
+
+AngularHttpMixin.prototype.getUrl = function (method, object, params) {
+  if (method === GET) {
+    if (object) {
+      return this.baseUrl + object[this.idKey]
+    } else {
+      return this.baseUrl
+    }
+  } else if (method === PUT || method === DELETE) {
+    return this.baseUrl + object[this.idKey]
+  } else if (method === POST) {
+    return this.baseUrl
+  }
+}
+
+module.exports = AngularHttpMixin
