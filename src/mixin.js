@@ -14,14 +14,20 @@ const DerivedProperty = require('./derived')
 
 const makeEmitter = require('./emitter')
 
-function Mixin (name) {
-  const klass = function (...args) {
-    klass[$$constructor].apply(this, args)
-    klass.$emit('new', this)
+function generateMixin (name) {
+  let klass
+  const context = {
+    ctor: function (klass, args) {
+      klass[$$constructor].apply(this, args)
+      klass.$emit('new', this)
+    }
   }
+  let factory = new Function('ctx', `return function ${name}(...args) { ctx.ctor.call(this, ctx.klass, args) }`)
+  context.klass = factory(context)
+  klass = context.klass
+
   const uniqueKey = Symbol('key')
 
-  Object.defineProperty(klass, 'name', {value: name, __proto__: null})
   Object.defineProperty(klass, 'uniqueKey', {value: () => uniqueKey, __proto__: null})
 
   makeEmitter(klass)
@@ -176,6 +182,10 @@ function Mixin (name) {
   }
 
   return klass
+}
+
+const Mixin = function (...args) {
+  return generateMixin(...args)
 }
 
 class MixinError extends Error {

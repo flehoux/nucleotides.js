@@ -14,6 +14,8 @@ const DerivedProperty = require('./derived')
 const makeEmitter = require('./emitter')
 const Storage = require('./storage')
 
+let Model
+
 function ModelDefinitionException (code, message, value) {
   this.code = code
   this.message = message
@@ -23,31 +25,34 @@ function ModelDefinitionException (code, message, value) {
 ModelDefinitionException.prototype = Object.create(Error.prototype)
 ModelDefinitionException.prototype.constructor = ModelDefinitionException
 
-const Model = function Model (name) {
-  const klass = function (...args) {
-    this[$$data] = {}
-    this[$$parents] = {}
-    this[$$referenceTracker] = {}
+function generateModel (name) {
+  let klass
 
-    klass.$emit('creating', this)
-    klass[$$constructor].apply(this, args)
-    klass.$emit('new', this)
-    this.$on('change', function (diff) {
-      for (let parentKey of this.$parents) {
-        this[$$parents][parentKey].$childDidChange(this, diff)
-      }
-    })
+  let context = {
+    ctor: function (klass, args) {
+      this[$$data] = {}
+      this[$$parents] = {}
+      this[$$referenceTracker] = {}
+
+      klass.$emit('creating', this)
+      klass[$$constructor].apply(this, args)
+      klass.$emit('new', this)
+      this.$on('change', function (diff) {
+        for (let parentKey of this.$parents) {
+          this[$$parents][parentKey].$childDidChange(this, diff)
+        }
+      })
+    }
   }
+  let factory = new Function('ctx', `return function ${name}(...args) { ctx.ctor.call(this, ctx.klass, args) }`)
+  context.klass = factory(context)
+  klass = context.klass
 
   klass[$$attributes] = {}
   klass[$$mixins] = []
   klass[$$isModel] = true
 
   Object.defineProperties(klass, {
-    name: {
-      value: name,
-      __proto__: null
-    },
     mixins: {
       value: klass[$$mixins],
       __proto__: null
@@ -263,6 +268,10 @@ const Model = function Model (name) {
   }
 
   return klass
+}
+
+Model = function (...args) {
+  return generateModel(...args)
 }
 
 Object.defineProperties(Model, {
