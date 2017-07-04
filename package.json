@@ -1,5 +1,5 @@
 {
-  "name": "nucleotides.js",
+  "name": "nucleotides",
   "version": "0.1.0",
   "description": "Agnostic and extensible organisation of state",
   "main": "index.js",
