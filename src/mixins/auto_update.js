@@ -46,6 +46,13 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
     }
   })
 
+AutoUpdateMixin.$on('use', function (mixin, model) {
+  model.$on('load', function (object, options) {
+    let deregister = object.autoUpdate(options.autoUpdate)
+    object.$on('unload', deregister)
+  })
+})
+
 AutoUpdateMixin.prototype.eventKey = function (object) {
   let idValue = object[this.idKey]
   return `AutoUpdate(${idValue})`
