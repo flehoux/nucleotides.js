@@ -26,27 +26,20 @@ ModelDefinitionException.prototype = Object.create(Error.prototype)
 ModelDefinitionException.prototype.constructor = ModelDefinitionException
 
 function generateModel (name) {
-  let klass
+  let klass = require('./create')(name, function (klass, args) {
+    this[$$data] = {}
+    this[$$parents] = {}
+    this[$$referenceTracker] = {}
 
-  let context = {
-    ctor: function (klass, args) {
-      this[$$data] = {}
-      this[$$parents] = {}
-      this[$$referenceTracker] = {}
-
-      klass.$emit('creating', this)
-      klass[$$constructor].apply(this, args)
-      klass.$emit('new', this)
-      this.$on('change', function (diff) {
-        for (let parentKey of this.$parents) {
-          this[$$parents][parentKey].$childDidChange(this, diff)
-        }
-      })
-    }
-  }
-  let factory = new Function('ctx', `return function ${name}(...args) { ctx.ctor.call(this, ctx.klass, args) }`)
-  context.klass = factory(context)
-  klass = context.klass
+    klass.$emit('creating', this)
+    klass[$$constructor].apply(this, args)
+    klass.$emit('new', this)
+    this.$on('change', function (diff) {
+      for (let parentKey of this.$parents) {
+        this[$$parents][parentKey].$childDidChange(this, diff)
+      }
+    })
+  })
 
   klass[$$attributes] = {}
   klass[$$mixins] = []

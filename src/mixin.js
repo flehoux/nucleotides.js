@@ -15,16 +15,10 @@ const DerivedProperty = require('./derived')
 const makeEmitter = require('./emitter')
 
 function generateMixin (name) {
-  let klass
-  const context = {
-    ctor: function (klass, args) {
-      klass[$$constructor].apply(this, args)
-      klass.$emit('new', this)
-    }
-  }
-  let factory = new Function('ctx', `return function ${name}(...args) { ctx.ctor.call(this, ctx.klass, args) }`)
-  context.klass = factory(context)
-  klass = context.klass
+  let klass = require('./create')(name, function (klass, args) {
+    klass[$$constructor].apply(this, args)
+    klass.$emit('new', this)
+  })
 
   const uniqueKey = Symbol('key')
 
