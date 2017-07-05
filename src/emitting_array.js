@@ -7,9 +7,18 @@ class EmittingArray extends Array {
 
   static create (...args) {
     let newArray = Reflect.construct(this, args)
-    return new Proxy(newArray, {
+    return new Proxy(newArray, this.proxyHandler)
+  }
+
+  static get proxyHandler () {
+    return {
       set: function (target, property, value) {
+        if (typeof property !== 'number') {
+          target[property] = value
+          return true
+        }
         let oldValue = target[property]
+        value = this.prepareElements([value])[0]
         if (value !== oldValue) {
           target[property] = value
           if (oldValue != null) {
@@ -21,23 +30,37 @@ class EmittingArray extends Array {
         }
         return true
       }
-    })
+    }
+  }
+
+  prepareElements (elements) {
+    if (elements.length === 0) return elements
+    let event = {elements, reason: null, canceled: false}
+    this.$emit('adding', event)
+    if (!event.canceled) {
+      return event.elements
+    } else {
+      throw new Error(event.reason)
+    }
   }
 
   push (...args) {
-    let result = super.push(...args)
-    this.$emit('add', args)
+    let elements = this.prepareElements(args)
+    let result = super.push(...elements)
+    this.$emit('add', elements)
     return result
   }
 
   unshift (...args) {
-    let result = super.unshift(...args)
-    this.$emit('add', args)
+    let elements = this.prepareElements(args)
+    let result = super.unshift(...elements)
+    this.$emit('add', elements)
     return result
   }
 
-  splice (start, deleteCount, ...args) {
+  splice (start, deleteCount, ...newElements) {
     let removed = []
+    newElements = this.prepareElements(newElements)
     if (deleteCount !== 0) {
       if (deleteCount == null) {
         removed = this.slice(start)
@@ -45,12 +68,12 @@ class EmittingArray extends Array {
         removed = this.slice(start, start + deleteCount)
       }
     }
-    let result = super.splice(start, deleteCount, ...args)
+    let result = super.splice(start, deleteCount, ...newElements)
     if (removed.length > 0) {
       this.$emit('remove', removed)
     }
-    if (args.length > 0) {
-      this.$emit('add', args)
+    if (newElements.length > 0) {
+      this.$emit('add', newElements)
     }
     return result
   }
@@ -72,25 +95,18 @@ class EmittingArray extends Array {
   }
 
   fill (value, start, end) {
+    let newElements = this.prepareElements([value])
     let removed = this.slice(start, end)
-    let result = super.fill(value, start, end)
+    let result = super.fill(newElements[0], start, end)
     if (removed.length > 0) {
       this.$emit('remove', removed)
-      this.$emit('add', [value])
+      this.$emit('add', newElements)
     }
     return result
   }
 
   clear () {
     return this.splice(0, this.length)
-  }
-
-  pushUnique (...args) {
-    for (let item of args) {
-      if (this.indexOf(item) === -1) {
-        this.push(item)
-      }
-    }
   }
 }
 
