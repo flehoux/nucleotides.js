@@ -189,7 +189,10 @@ function generateModel (name) {
         }
       }
     } else {
-      throw new ModelDefinitionException('invalid', `Implemented operation ${operation} is unknown`)
+      if (typeof priority === 'function') {
+        fun = priority
+      }
+      klass[operation] = fun
     }
     return klass
   }
