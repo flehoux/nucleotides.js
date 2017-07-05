@@ -3,6 +3,7 @@
 const $$constructor = Symbol('construct')
 
 const $$derivedProperties = Symbol('derived')
+const $$staticProperties = Symbol('statics')
 const $$findOne = Symbol('find_one')
 const $$findMany = Symbol('find_many')
 const $$store = Symbol('store')
@@ -36,6 +37,7 @@ function generateMixin (name) {
   }
 
   klass[$$derivedProperties] = []
+  klass[$$staticProperties] = []
   klass[$$findOne] = []
   klass[$$findMany] = []
   klass[$$store] = []
@@ -52,6 +54,11 @@ function generateMixin (name) {
 
   klass.derive = function (name, options, getter) {
     klass[$$derivedProperties].push({ name, options, getter })
+    return klass
+  }
+
+  klass.set = function (name, value) {
+    klass[$$staticProperties].push({ name, value })
     return klass
   }
 
@@ -109,6 +116,7 @@ function generateMixin (name) {
 
   klass.prototype.augmentModel = function (model) {
     augmentWithDerivedProperties(this, model)
+    augmentWithStaticProperties(this, model)
     augmentWithMethods(this, model)
     augmentWithClassMethods(this, model)
     augmentWithMixins(this, model)
@@ -125,6 +133,13 @@ function generateMixin (name) {
           })
         }
       }
+    }
+  }
+
+  function augmentWithStaticProperties (mixin, model) {
+    for (let staticArg of klass[$$staticProperties]) {
+      let { name, value } = staticArg
+      model.set(name, value)
     }
   }
 

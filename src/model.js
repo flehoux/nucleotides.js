@@ -118,6 +118,11 @@ function generateModel (name) {
     return klass
   }
 
+  klass.set = function (name, value) {
+    Object.defineProperty(klass, name, {value: value, __proto__: null})
+    return klass
+  }
+
   klass.method = function (name, fn) {
     if (typeof fn === 'function') {
       klass.prototype[name] = fn
