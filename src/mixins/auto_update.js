@@ -1,5 +1,7 @@
 const {Mixin, Storage} = require('../..')
 
+const $$autoUpdating = Symbol('autoUpdating')
+
 const AutoUpdateMixin = Mixin('AutoUpdateMixin')
   .construct(function (options = {}) {
     this.idKey = options.id
@@ -13,7 +15,13 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
     this.constructor.$emit(mixin.eventKey(this), this)
     return flow.next()
   })
+  .derive('$isAutoUpdating', function () {
+    return this[$$autoUpdating] === true
+  })
   .method('autoUpdate', function (mixin, conditional) {
+    if (this[$$autoUpdating]) {
+      return
+    }
     let listen
     let self = this
     if (typeof conditional === 'function') {
@@ -41,8 +49,10 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
     }
     let eventKey = mixin.eventKey(this)
     this.constructor.$on(eventKey, listen)
+    this[$$autoUpdating] = true
     return () => {
       this.constructor.$off(eventKey, listen)
+      delete this[$$autoUpdating]
     }
   })
 
