@@ -106,7 +106,7 @@ class Collection extends EmittingArray {
 
   get (id) {
     if (id != null && typeof id === 'object') {
-      id = Storage.idFor(id)
+      id = id[Storage.idKeyFor(this.$model)]
     }
     return this[$$map][id]
   }
@@ -149,9 +149,8 @@ class Collection extends EmittingArray {
     if (existing != null) {
       if (Model.isInstance(object)) {
         object = object.$clean
-      } else {
-        existing.$updateAttributes(object)
       }
+      existing.$updateAttributes(object)
     } else if (upsert) {
       this.push(object)
     }

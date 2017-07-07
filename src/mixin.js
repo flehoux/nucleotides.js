@@ -10,6 +10,7 @@ const $$store = Symbol('store')
 const $$usedMixins = Symbol('used')
 const $$methods = Symbol('methods')
 const $$classMethods = Symbol('classMethods')
+const $$implementations = Symbol('implementations')
 
 const DerivedProperty = require('./derived')
 
@@ -39,6 +40,7 @@ function generateMixin (name) {
     }
   }
 
+  klass[$$implementations] = {}
   klass[$$derivedProperties] = []
   klass[$$staticProperties] = []
   klass[$$findOne] = []
@@ -109,10 +111,10 @@ function generateMixin (name) {
       priority = Storage.MEDIUM
     }
     fn[Symbol.for('priority')] = priority
-    if (klass[operation] == null) {
-      klass[operation] = [fn]
+    if (klass[$$implementations][operation] == null) {
+      klass[$$implementations][operation] = [fn]
     } else {
-      klass[operation].push(fn)
+      klass[$$implementations][operation].push(fn)
     }
     return klass
   }
@@ -127,10 +129,9 @@ function generateMixin (name) {
   }
 
   function augmentWithImplementations (mixin, model) {
-    const Storage = require('./storage')
-    for (let operation of Storage.$$operations) {
-      if (klass[operation] != null) {
-        for (let fn of klass[operation]) {
+    for (let operation of Object.getOwnPropertySymbols(klass[$$implementations])) {
+      if (klass[$$implementations][operation] != null) {
+        for (let fn of klass[$$implementations][operation]) {
           model.implement(operation, fn[Symbol.for('priority')], function (...args) {
             return fn.call(this, mixin, ...args)
           })

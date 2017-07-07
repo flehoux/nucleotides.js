@@ -86,6 +86,10 @@ function generateModel (name) {
     return klass
   }
 
+  klass.createCollection = function (...elements) {
+    return require('./collection').create(this, ...elements)
+  }
+
   klass.attribute = function (name, type, options) {
     if (type == null && options == null) {
       return klass[$$attributes][name]

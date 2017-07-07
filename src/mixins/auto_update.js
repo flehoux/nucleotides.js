@@ -11,13 +11,13 @@ function autoUpdateObject (mixin, conditional) {
   let self = this
   if (typeof conditional === 'function') {
     listen = function (committed) {
-      if (self === committed) return
+      if (self === committed) {
+        return
+      }
       let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
-        if (response) {
-          self.$updateAttributes(clean)
-        }
+        self.$updateAttributes(clean)
       } else if (response != null && typeof response.then === 'function') {
         response.then((resolved) => {
           if (resolved === true) {
@@ -28,7 +28,9 @@ function autoUpdateObject (mixin, conditional) {
     }
   } else {
     listen = function (committed) {
-      if (self === committed) return
+      if (self === committed) {
+        return
+      }
       self.$updateAttributes(committed.$clean)
     }
   }
@@ -42,43 +44,46 @@ function autoUpdateObject (mixin, conditional) {
 }
 
 function autoUpdateCollection (mixin, conditional) {
-  if (this[$$autoUpdating]) {
-    return
+  if (this.$isAutoUpdating) {
+    return 1
   }
+  let collection = this
   let listen
-  let self = this
   if (typeof conditional === 'function') {
-    listen = function (committed) {
-      if (self === committed) return
-      let clean = committed.$clean
-      let response = conditional.call(self, clean)
+    listen = function (source) {
+      let destination = collection.get(source)
+      if (destination === source || destination == null) {
+        return
+      }
+      let clean = source.$clean
+      let response = conditional.call(collection, destination, clean)
       if (response === true) {
-        if (response) {
-          self.replace(clean)
-        }
+        destination.$updateAttributes(clean)
       } else if (response != null && typeof response.then === 'function') {
         response.then((resolved) => {
           if (resolved === true) {
-            self.replace(clean)
+            destination.$updateAttributes(clean)
           }
         })
       }
     }
   } else {
-    listen = function (committed) {
-      if (self === committed) return
-      self.replace(committed.$clean)
+    listen = function (source) {
+      if (collection.get(source) === source) {
+        return
+      }
+      collection.update(source.$clean, false)
     }
   }
-  this.constructor.$on($$eventKey, listen)
+  this.$model.$on($$eventKey, listen)
   this[$$autoUpdating] = true
   return () => {
-    this.constructor.$off($$eventKey, listen)
+    this.$model.$off($$eventKey, listen)
     delete this[$$autoUpdating]
   }
 }
 
-function prepareCollection (mixin, flow) {
+function prepareCollection (mixin) {
   let coll = this
   coll.$on('mount', function (options) {
     if (options.autoUpdate !== false && !coll.$isAutoUpdating) {
@@ -86,11 +91,11 @@ function prepareCollection (mixin, flow) {
       coll.$once('unmount', deregister)
     }
   })
-  coll.$autoUpdate = autoUpdateCollection
+  coll.$autoUpdate = function (conditional) {
+    return autoUpdateCollection.call(this, mixin, conditional)
+  }
   Object.defineProperty(coll, '$isAutoUpdating', {
-    get: function () {
-      return this[$$autoUpdating] === true
-    }
+    get: function () { return this[$$autoUpdating] === true }
   })
 }
 
@@ -110,8 +115,8 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
 
 AutoUpdateMixin.$on('use', function (mixin, model) {
   const Storage = require('../storage')
-  if (!model.didSet(Storage.$$idKey)) {
-    throw new Mixin.Error('The AutoUpdate mixin requires the receiving model to set `$idKey`', this)
+  if (!model.didSet(Storage.$$idKey) && model.attributes().id == null) {
+    throw new Mixin.Error('The AutoUpdate mixin requires the receiving model to set `Storage.$$idKey` or have an \'id\' attribute', this)
   }
   model.$on('mount', function (object, options) {
     if (options.autoUpdate !== false && !object.$isAutoUpdating) {
