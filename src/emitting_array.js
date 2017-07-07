@@ -13,19 +13,19 @@ class EmittingArray extends Array {
   static get proxyHandler () {
     return {
       set: function (target, property, value) {
-        if (typeof property !== 'number') {
+        if ((typeof property !== 'string' && typeof property !== 'number') || parseFloat(property).toString() !== property) {
           target[property] = value
           return true
         }
         let oldValue = target[property]
-        value = this.prepareElements([value])[0]
-        if (value !== oldValue) {
-          target[property] = value
+        let [newValue] = target.prepareElements([value])
+        if (newValue !== oldValue) {
+          target[property] = newValue
           if (oldValue != null) {
             target.$emit('remove', [oldValue])
           }
-          if (value != null) {
-            target.$emit('add', [value])
+          if (newValue != null) {
+            target.$emit('add', [newValue])
           }
         }
         return true
