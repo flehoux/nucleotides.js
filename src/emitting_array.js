@@ -13,7 +13,8 @@ class EmittingArray extends Array {
   static get proxyHandler () {
     return {
       set: function (target, property, value) {
-        if ((typeof property !== 'string' && typeof property !== 'number') || parseFloat(property).toString() !== property) {
+        const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
+        if (isInapplicableType || parseFloat(property).toString() !== property) {
           target[property] = value
           return true
         }

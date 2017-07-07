@@ -24,16 +24,15 @@ function ensureInstance (response) {
 }
 
 function ensureListOfInstance (response) {
-  let result = []
+  const Collection = require('./collection')
+  let result = Collection.create(this)
   let values
   if (response instanceof Success) {
     values = response.result
   } else {
     values = response
   }
-  for (let item of values) {
-    result.push(ensureInstance.call(this, item))
-  }
+  result.push(...values)
   if (response instanceof Success) {
     result.$response = response
   }
@@ -123,7 +122,6 @@ const Storage = {
   Failure,
 
   $$idKey: Symbol.for('idKey'),
-
   $$findOne: Symbol.for('findOne'),
   $$findMany: Symbol.for('findMany'),
   $$store: Symbol.for('store'),
@@ -166,7 +164,6 @@ const Storage = {
     }
     switcher[operation]()
   },
-
   idFor: function (object, defaultKey = 'id') {
     const Model = require('./model')
     if (Model.isInstance(object)) {
