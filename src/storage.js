@@ -121,6 +121,7 @@ class Failure {
 const Storage = {
   Success,
   Failure,
+
   $$findOne: Symbol.for('findOne'),
   $$findMany: Symbol.for('findMany'),
   $$store: Symbol.for('store'),

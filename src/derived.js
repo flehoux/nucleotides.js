@@ -1,15 +1,18 @@
 'use strict'
 
-function DerivedDefinitionException (code, message, value) {
-  this.code = code
-  this.message = message
-  this.value = value
+class DerivedDefinitionException extends Error {
+  constructor (code, message, value) {
+    super(message)
+    this.code = code
+    this.value = value
+  }
 }
 
-DerivedDefinitionException.prototype = Object.create(Error.prototype)
-DerivedDefinitionException.prototype.constructor = DerivedDefinitionException
-
 class DerivedProperty {
+  static get DefinitionException () {
+    return DerivedDefinitionException
+  }
+
   constructor (name, options, getter) {
     if (typeof options === 'function') {
       getter = options
@@ -102,7 +105,5 @@ class DerivedProperty {
     }
   }
 }
-
-DerivedProperty.DefinitionException = DerivedDefinitionException
 
 module.exports = DerivedProperty

@@ -32,7 +32,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne('1').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        inst2.autoUpdate()
+        inst2.$autoUpdate()
         inst1.firstName = 'Larry'
         inst1.save().then(function () {
           expect(inst2.fullName).toBe('Larry Smith')
@@ -51,7 +51,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne('2').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        let unlisten = inst2.autoUpdate()
+        let unlisten = inst2.$autoUpdate()
         unlisten()
         inst1.firstName = 'Larry'
         inst1.save().then(function () {
@@ -71,7 +71,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne('3').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        inst2.autoUpdate(function ({firstName}) {
+        inst2.$autoUpdate(function ({firstName}) {
           return firstName.slice(0, 1) !== 'L'
         })
         inst1.firstName = 'Larry'
@@ -96,7 +96,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne('4').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        inst2.autoUpdate(function ({firstName}) {
+        inst2.$autoUpdate(function ({firstName}) {
           return new Promise(function (resolve) {
             resolve(firstName.slice(0, 1) !== 'L')
           })
@@ -124,7 +124,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne('5').then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        inst2.autoUpdate()
+        inst2.$autoUpdate()
         inst2.$on('change', spy)
         inst1.firstName = 'Larry'
         inst1.save().then(function () {

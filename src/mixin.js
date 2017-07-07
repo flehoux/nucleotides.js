@@ -23,7 +23,10 @@ function generateMixin (name) {
 
   const uniqueKey = Symbol('key')
 
-  Object.defineProperty(klass, 'uniqueKey', {value: () => uniqueKey, __proto__: null})
+  Object.defineProperty(klass, '$$uniqueKey', {
+    value: uniqueKey,
+    __proto__: null
+  })
 
   makeEmitter(klass)
   makeEmitter(klass.prototype)

@@ -155,7 +155,7 @@ function generateModel (name) {
 
   klass.use = function (mixin) {
     var alreadyMixedIn = klass.mixins.some(function (other) {
-      return other.constructor.uniqueKey() === mixin.constructor.uniqueKey()
+      return other.constructor.$$uniqueKey === mixin.constructor.$$uniqueKey
     })
 
     if (alreadyMixedIn) {
