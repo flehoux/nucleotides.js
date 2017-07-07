@@ -4,46 +4,11 @@ const $$type = Symbol('type')
 const $$generator = Symbol('generator')
 const EmittingArray = require('./emitting_array')
 
-function AttributeDefinitionException (code, message, value) {
-  this.code = code
-  this.message = message
-  this.value = value
-}
-
-AttributeDefinitionException.prototype = Object.create(Error.prototype)
-AttributeDefinitionException.prototype.constructor = AttributeDefinitionException
-
-function generatorForBaseType (attribute, type) {
-  let Model = require('./model')
-  if (type === String) {
-    return (value) => value.toString()
-  } else if (type === Number) {
-    return (value) => parseFloat(value)
-  } else if (type === Boolean) {
-    return (value) => !!value
-  } else if (type === Date) {
-    return function (value) {
-      if (typeof value === 'string' || typeof value === 'number') {
-        return new Date(value)
-      } else if (typeof value === 'object') {
-        const { year, month, date, hours, minutes, seconds, milliseconds } = value
-        if (value.utc === true) {
-          return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds))
-        } else {
-          return new Date(year, month, date, hours, minutes, seconds, milliseconds)
-        }
-      }
-    }
-  } else if (Model.isModel(type)) {
-    return function (...args) {
-      if (Model.isInstance(args[0], type)) {
-        return args[0]
-      } else {
-        return Reflect.construct(type, args)
-      }
-    }
-  } else {
-    throw new AttributeDefinitionException('type', `Attribute ${attribute.name} is being defined without a proper type`, type)
+class AttributeDefinitionException extends Error {
+  constructor (code, message, value) {
+    super(message)
+    this.code = code
+    this.value = value
   }
 }
 
@@ -54,6 +19,44 @@ class Attribute {
     this.parseOptions(options)
   }
 
+  static generatorForBaseType (attribute, type) {
+    let Model = require('./model')
+    if (type === String) {
+      return (value) => value.toString()
+    } else if (type === Number) {
+      return (value) => parseFloat(value)
+    } else if (type === Boolean) {
+      return (value) => !!value
+    } else if (type === Date) {
+      return function (value) {
+        if (typeof value === 'string' || typeof value === 'number') {
+          return new Date(value)
+        } else if (typeof value === 'object') {
+          const { year, month, date, hours, minutes, seconds, milliseconds } = value
+          if (value.utc === true) {
+            return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds))
+          } else {
+            return new Date(year, month, date, hours, minutes, seconds, milliseconds)
+          }
+        }
+      }
+    } else if (Model.isModel(type)) {
+      return function (...args) {
+        if (Model.isInstance(args[0], type)) {
+          return args[0]
+        } else {
+          return Reflect.construct(type, args)
+        }
+      }
+    } else {
+      throw new AttributeDefinitionException('type', `Attribute ${attribute.name} is being defined without a proper type`, type)
+    }
+  }
+
+  static get DefinitionException () {
+    return AttributeDefinitionException
+  }
+
   static get baseTypes () {
     return [String, Number, Boolean, Date]
   }
@@ -61,6 +64,16 @@ class Attribute {
   static allowsBaseType (type) {
     let Model = require('./model')
     return this.baseTypes.indexOf(type) >= 0 || Model.isModel(type)
+  }
+
+  static shorthand (name, options) {
+    if (options.hasOwnProperty('type')) {
+      let type = options.type
+      delete options.type
+      return new Attribute(name, type, options)
+    } else {
+      return new Attribute(name, options)
+    }
   }
 
   set baseType (typeClass) {
@@ -107,13 +120,13 @@ class Attribute {
 
     if (Attribute.allowsBaseType(typeDefinition)) {
       this.baseType = typeDefinition
-      this[$$generator] = generatorForBaseType(this, typeDefinition)
+      this[$$generator] = Attribute.generatorForBaseType(this, typeDefinition)
     } else if (Attribute.allowsBaseType(typeDefinition.base)) {
       this.baseType = typeDefinition.base
       if (typeof typeDefinition.generator === 'function') {
         this[$$generator] = typeDefinition.generator
       } else {
-        this[$$generator] = generatorForBaseType(this, typeDefinition)
+        this[$$generator] = Attribute.generatorForBaseType(this, typeDefinition)
       }
     }
   }
@@ -151,7 +164,13 @@ class Attribute {
   }
 
   initializeArrayInTarget (object, value) {
-    let array = EmittingArray.create()
+    const Collection = require('./collection')
+    let array
+    if (this.isModel) {
+      array = Collection.create(this.baseType)
+    } else {
+      array = EmittingArray.create()
+    }
     let attribute = this
 
     object.$data[this.name] = array
@@ -200,15 +219,21 @@ class Attribute {
 
   updateArrayInTarget (object, value) {
     let currentItems = object.$data[this.name]
-    let newItems = []
+    let newItems
     if (value != null) {
       if (typeof value[Symbol.iterator] === 'function') {
-        for (let item of value) {
-          newItems.push(this.generator(item))
+        if (!this.isModel) {
+          value = value.map(this.generator.bind(this))
         }
+        newItems = value
       } else {
-        newItems.push(this.generator(value))
+        if (!this.isModel) {
+          value = this.generator(value)
+        }
+        newItems = [value]
       }
+    } else {
+      newItems = []
     }
     currentItems.splice(0, currentItems.length, ...newItems)
   }
@@ -221,17 +246,5 @@ class Attribute {
     }
   }
 }
-
-Attribute.shorthand = function (name, options) {
-  if (options.hasOwnProperty('type')) {
-    let type = options.type
-    delete options.type
-    return new Attribute(name, type, options)
-  } else {
-    return new Attribute(name, options)
-  }
-}
-
-Attribute.DefinitionException = AttributeDefinitionException
 
 module.exports = Attribute
