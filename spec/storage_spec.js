@@ -11,7 +11,7 @@ describe('A model defined with a storage implementation', function () {
       lastName: String
     })
     .implement(Storage.$$store, function (flow) {
-      storage[this.nas] = this.clean
+      storage[this.nas] = this.$clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (flow, nas) {
@@ -129,7 +129,7 @@ describe('A model using a mixin that defines a storage implementation', function
 
   const StorageMixin = Mixin('Storage')
     .implement(Storage.$$store, function (mixin, flow) {
-      storage[this[mixin.key]] = this.clean
+      storage[this[mixin.key]] = this.$clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (mixin, flow, key) {

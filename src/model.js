@@ -197,12 +197,12 @@ function generateModel (name) {
     return klass
   }
 
-  klass.derive('clean', {cache: true}, function () {
+  klass.derive('$clean', {cache: true}, function () {
     let data = {}
     for (let key in this.$data) {
       let value = this.$data[key]
       if (Model.isInstance(value)) {
-        data[key] = value.clean
+        data[key] = value.$clean
       } else {
         data[key] = value
       }

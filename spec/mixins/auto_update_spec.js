@@ -15,7 +15,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
     })
     .set('$idKey', 'id')
     .implement(Storage.$$store, function (flow) {
-      storage[this.nas] = this.clean
+      storage[this.nas] = this.$clean
       flow.resolve(true)
     })
     .implement(Storage.$$findOne, function (flow, nas) {

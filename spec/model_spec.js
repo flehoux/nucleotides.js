@@ -157,7 +157,7 @@ describe('A Model with an attribute typed as another Model', function () {
       birthdate: 527817600000
     })
 
-    expect(person.clean).toEqual({
+    expect(person.$clean).toEqual({
       name: {
         first: 'John',
         last: '2'

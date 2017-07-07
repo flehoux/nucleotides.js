@@ -25,13 +25,13 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
     let attribute = model.attribute(key)
     if (attribute.collection) {
       if (attribute.isModel) {
-        previousDifference[key] = object[key].map((subobject) => subobject.clean)
+        previousDifference[key] = object[key].map((subobject) => subobject.$clean)
       } else {
         previousDifference[key] = object[key].slice(0)
       }
     } else {
       if (attribute.isModel) {
-        previousDifference[key] = object[key].clean
+        previousDifference[key] = object[key].$clean
       } else {
         previousDifference[key] = diff[key]
       }

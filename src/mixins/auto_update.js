@@ -1,6 +1,7 @@
 const {Mixin, Storage, Collection} = require('../..')
 
 const $$autoUpdating = Symbol('autoUpdating')
+const $$globalEventKey = 'AutoUpdate.emit'
 
 function autoUpdateObject (mixin, conditional) {
   if (this[$$autoUpdating]) {
@@ -11,7 +12,7 @@ function autoUpdateObject (mixin, conditional) {
   if (typeof conditional === 'function') {
     listen = function (committed) {
       if (self === committed) return
-      let clean = committed.clean
+      let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
         if (response) {
@@ -28,7 +29,7 @@ function autoUpdateObject (mixin, conditional) {
   } else {
     listen = function (committed) {
       if (self === committed) return
-      self.$updateAttributes(committed.clean)
+      self.$updateAttributes(committed.$clean)
     }
   }
   let eventKey = mixin.eventKey(this)
@@ -49,7 +50,7 @@ function autoUpdateCollection (mixin, conditional) {
   if (typeof conditional === 'function') {
     listen = function (committed) {
       if (self === committed) return
-      let clean = committed.clean
+      let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
         if (response) {
@@ -66,7 +67,7 @@ function autoUpdateCollection (mixin, conditional) {
   } else {
     listen = function (committed) {
       if (self === committed) return
-      self.replace(committed.clean)
+      self.replace(committed.$clean)
     }
   }
   let eventKey = mixin.eventKey(this)
