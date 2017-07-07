@@ -13,6 +13,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       nas: String,
       emails: [String]
     })
+    .set('$idKey', 'id')
     .implement(Storage.$$store, function (flow) {
       storage[this.nas] = this.clean
       flow.resolve(true)
@@ -21,7 +22,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       flow.resolve(storage[nas])
     })
     .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
-    .use(new Mixin.AutoUpdate({id: 'nas'}))
+    .use(new Mixin.AutoUpdate({}))
 
   it('should propagate saved updates to objects sharing the same ID', function (done) {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: '1' })
