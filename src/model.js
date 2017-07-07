@@ -57,9 +57,7 @@ function generateModel (name) {
       get: function () {
         return this[$$data]
       }
-    }
-  })
-  Object.defineProperties(klass.prototype, {
+    },
     $parents: {
       get: function () {
         return Object.getOwnPropertySymbols(this[$$parents])
