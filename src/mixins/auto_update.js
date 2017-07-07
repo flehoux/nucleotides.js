@@ -1,7 +1,7 @@
 const {Mixin, Storage, Collection} = require('../..')
 
 const $$autoUpdating = Symbol('autoUpdating')
-const $$globalEventKey = 'autoUpdate'
+const $$eventKey = 'autoUpdate'
 
 function autoUpdateObject (mixin, conditional) {
   if (this[$$autoUpdating]) {
@@ -70,10 +70,10 @@ function autoUpdateCollection (mixin, conditional) {
       self.replace(committed.$clean)
     }
   }
-  this.constructor.$on($$globalEventKey, listen)
+  this.constructor.$on($$eventKey, listen)
   this[$$autoUpdating] = true
   return () => {
-    this.constructor.$off($$globalEventKey, listen)
+    this.constructor.$off($$eventKey, listen)
     delete this[$$autoUpdating]
   }
 }
@@ -96,7 +96,7 @@ function prepareCollection (mixin, flow) {
 
 function emitAutoUpdate (mixin, flow) {
   this.constructor.$emit(mixin.eventKey(this), this)
-  this.constructor.$emit($$globalEventKey, this)
+  this.constructor.$emit($$eventKey, this)
   return flow.next()
 }
 
@@ -109,7 +109,8 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
   })
 
 AutoUpdateMixin.$on('use', function (mixin, model) {
-  if (model.$idKey == null) {
+  const Storage = require('../storage')
+  if (!model.didSet(Storage.$$idKey)) {
     throw new Mixin.Error('The AutoUpdate mixin requires the receiving model to set `$idKey`', this)
   }
   model.$on('mount', function (object, options) {
@@ -121,8 +122,8 @@ AutoUpdateMixin.$on('use', function (mixin, model) {
 })
 
 AutoUpdateMixin.prototype.eventKey = function (object) {
-  let idValue = object[object.constructor.$idKey]
-  return `${$$globalEventKey}(${idValue})`
+  const Storage = require('../storage')
+  return `${$$eventKey}(${Storage.idFor(object)})`
 }
 
 module.exports = AutoUpdateMixin

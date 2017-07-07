@@ -122,6 +122,8 @@ const Storage = {
   Success,
   Failure,
 
+  $$idKey: Symbol.for('idKey'),
+
   $$findOne: Symbol.for('findOne'),
   $$findMany: Symbol.for('findMany'),
   $$store: Symbol.for('store'),
@@ -163,6 +165,21 @@ const Storage = {
       }
     }
     switcher[operation]()
+  },
+
+  idFor: function (object, defaultKey = 'id') {
+    const Model = require('./model')
+    if (Model.isInstance(object)) {
+      return object[this.idKeyFor(object, defaultKey)]
+    }
+  },
+  idKeyFor: function (object, defaultKey = 'id') {
+    const Model = require('./model')
+    if (Model.isInstance(object)) {
+      return object[this.$$idKey] || object.constructor[this.$$idKey] || defaultKey
+    } else if (Model.isModel(object)) {
+      return object[this.$$idKey] || defaultKey
+    }
   }
 }
 

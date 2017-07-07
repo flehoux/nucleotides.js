@@ -208,6 +208,14 @@ function generateModel (name) {
     return data
   })
 
+  klass.didSet = function (key) {
+    return klass[key] != null
+  }
+
+  klass.didImplement = function (key) {
+    return typeof klass[key] === 'function'
+  }
+
   klass.prototype.$updateAttributes = function (data) {
     let difference = {}
     for (let attributeName in data) {

@@ -2,13 +2,13 @@
 
 const $$model = Symbol('Model')
 const $$map = Symbol('map')
-const $$keyGetter = Symbol('keyGetter')
 
 const EmittingArray = require('./emitting_array')
 const Model = require('./model')
+const Storage = require('./storage')
 
 const $$prepareElement = Symbol.for('Collection.prepareElement')
-const $$prepareCollection = Symbol.for('Collection.prepareElement')
+const $$prepareCollection = Symbol.for('Collection.prepareCollection')
 
 class Collection extends EmittingArray {
   static get [Symbol.species] () {
@@ -78,25 +78,20 @@ class Collection extends EmittingArray {
     return results
   }
 
-  [$$keyGetter] (object) {
-    let idKey = this.$model.$idKey
-    return object[idKey]
-  }
-
   [$$prepareCollection] () {
     if (typeof this.$model[$$prepareCollection] === 'function') {
       this.$model[$$prepareCollection].call(this)
     }
-    if (this.$model.$idKey != null) {
+    if (this.$model.didSet(Storage.$$idKey)) {
       this.$on('add', function (elements) {
         for (let element of elements) {
-          let key = this[$$keyGetter](element)
+          let key = Storage.idFor(element)
           this[$$map][key] = element
         }
       })
       this.$on('remove', function (elements) {
         for (let element of elements) {
-          let key = this[$$keyGetter](element)
+          let key = Storage.idFor(element)
           delete this[$$map][key]
         }
       })
@@ -111,14 +106,14 @@ class Collection extends EmittingArray {
 
   get (id) {
     if (id != null && typeof id === 'object') {
-      id = this[$$keyGetter](id)
+      id = Storage.idFor(id)
     }
     return this[$$map][id]
   }
 
   has (id) {
     if (id != null && typeof id === 'object') {
-      id = this[$$keyGetter](id)
+      id = Storage.idFor(id)
     }
     return this[$$map][id] != null
   }
