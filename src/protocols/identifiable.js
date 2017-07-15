@@ -53,10 +53,9 @@ Object.assign(Identifiable, {
       return Identifiable.valueFor(object, 'idKey')
     }
   },
-  urlFor: function (object, method) {
-    const url = Identifiable.call(object, 'buildUrl', method)
-    if (url != null) {
-      return url
+  urlFor: function (object, method, value) {
+    if (Identifiable.hasImplementationsFor(object, 'buildUrl')) {
+      return Identifiable.call(object, 'buildUrl', method)
     }
     const Model = require('../model')
     if (Model.isInstance(object)) {
@@ -70,11 +69,14 @@ Object.assign(Identifiable, {
       return components.join('/')
     } else {
       let model = object
-      let basis = Identifiable.valueFor(model, 'url')
-      if (basis == null) {
+      let components = [Identifiable.valueFor(model, 'url')]
+      if (components[0] == null) {
         throw new Error(`Tried to get URL for model without 'Identifiable.url' set: ${model.name}`)
       }
-      return basis
+      if (value != null) {
+        components.push(value[Identifiable.idKeyFor(model)])
+      }
+      return components.join('/')
     }
   }
 })

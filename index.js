@@ -3,7 +3,13 @@ const Mixin = require('./src/mixin')
 const Protocol = require('./src/protocol')
 const Collection = require('./src/collection')
 
-module.exports = { Model, Mixin, Protocol, Collection }
+module.exports = {
+  Model,
+  Mixin,
+  Protocol,
+  Collection,
+  makeEmitter: require('./src/emitter')
+}
 
 let protocols = require('./src/protocols')
 for (let protocolName in protocols) {

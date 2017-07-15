@@ -88,7 +88,7 @@ function autoUpdateCollection (mixin, conditional) {
 const AutoUpdateMixin = Mixin('AutoUpdateMixin')
   .require(Identifiable)
   .implement(Collectable.prepareCollection, function (mixin, coll) {
-    coll.$on('mount', function (options) {
+    coll.$on('mount', function (options = {}) {
       if (options.autoUpdate !== false && !coll.$isAutoUpdating) {
         let deregister = coll.$autoUpdate(options.autoUpdate)
         coll.$once('unmount', deregister)
@@ -111,8 +111,8 @@ AutoUpdateMixin.$on('use', function (mixin, model) {
     object.constructor.$emit(mixin.eventKey(object), object)
     object.constructor.$emit($$eventKey, object)
   })
-  model.$on('mount', function (object, options) {
-    if (options.autoUpdate !== false && !object.$isAutoUpdating) {
+  model.$on('mount', function (object, options = {}) {
+    if (options.autoUpdate !== false) {
       let deregister = object.$autoUpdate(options.autoUpdate)
       object.$once('unmount', deregister)
     }
