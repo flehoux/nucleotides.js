@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A model defined with a storage implementation', function () {
-  const {Model, Storage} = require('..')
+  const {Model, Protocol} = require('..')
   var storage = {}
 
   const Person = Model('Person')
@@ -10,14 +10,14 @@ describe('A model defined with a storage implementation', function () {
       firstName: String,
       lastName: String
     })
-    .implement(Storage.$$store, function (flow) {
+    .implement(Protocol.Queryable.store, function (flow) {
       storage[this.nas] = this.$clean
       flow.resolve(true)
     })
-    .implement(Storage.$$findOne, function (flow, nas) {
+    .implement(Protocol.Queryable.findOne, function (flow, nas) {
       flow.resolve(storage[nas])
     })
-    .implement(Storage.$$findMany, function (flow, lastName) {
+    .implement(Protocol.Queryable.findMany, function (flow, lastName) {
       let result = []
       for (let nas in storage) {
         let object = storage[nas]
@@ -27,7 +27,7 @@ describe('A model defined with a storage implementation', function () {
       }
       flow.resolve(result)
     })
-    .implement(Storage.$$remove, function (flow) {
+    .implement(Protocol.Queryable.remove, function (flow) {
       delete storage[this.nas]
       flow.resolve(true)
     })
@@ -72,6 +72,7 @@ describe('A model defined with a storage implementation', function () {
         }
         return 1
       })
+
       expect(people.length).toBe(2)
       expect(people[0]).toEqual(jasmine.any(Person))
       expect(people[0].firstName).toBe('John')
@@ -111,7 +112,7 @@ describe('A model defined with a storage implementation', function () {
 
     Person.findMany('Smith').then(function (people) {
       expect(people.length).toBe(2)
-      people[0].remove().then(function () {
+      people[0].$remove().then(function () {
         Person.findMany('Smith').then(function (people) {
           expect(people.length).toBe(1)
           delete storage['5']
@@ -124,18 +125,18 @@ describe('A model defined with a storage implementation', function () {
 })
 
 describe('A model using a mixin that defines a storage implementation', function () {
-  const {Model, Mixin, Storage} = require('..')
+  const {Model, Mixin, Protocol} = require('..')
   var storage = {}
 
   const StorageMixin = Mixin('Storage')
-    .implement(Storage.$$store, function (mixin, flow) {
+    .implement(Protocol.Queryable.store, function (mixin, flow) {
       storage[this[mixin.key]] = this.$clean
       flow.resolve(true)
     })
-    .implement(Storage.$$findOne, function (mixin, flow, key) {
+    .implement(Protocol.Queryable.findOne, function (mixin, flow, key) {
       flow.resolve(storage[key])
     })
-    .implement(Storage.$$findMany, function (mixin, flow, key) {
+    .implement(Protocol.Queryable.findMany, function (mixin, flow, key) {
       let result = []
       for (let pkey in storage) {
         let object = storage[pkey]
@@ -145,7 +146,7 @@ describe('A model using a mixin that defines a storage implementation', function
       }
       flow.resolve(result)
     })
-    .implement(Storage.$$remove, function (mixin, flow) {
+    .implement(Protocol.Queryable.remove, function (mixin, flow) {
       delete storage[this[mixin.key]]
       flow.resolve(true)
     })
@@ -237,7 +238,7 @@ describe('A model using a mixin that defines a storage implementation', function
 
     Person.findMany('Smith').then(function (people) {
       expect(people.length).toBe(2)
-      people[0].remove().then(function () {
+      people[0].$remove().then(function () {
         Person.findMany('Smith').then(function (people) {
           expect(people.length).toBe(1)
           delete storage['5']

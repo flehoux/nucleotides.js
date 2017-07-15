@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A simple Model augmented using the AutoUpdate Mixin', function () {
-  const { Model, Storage, Mixin } = require('../..')
+  const { Model, Protocol, Mixin } = require('../..')
 
   const storage = {}
   var i = 0
@@ -15,12 +15,12 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       nas: String,
       emails: [String]
     })
-    .set(Storage.$$idKey, 'nas')
-    .implement(Storage.$$store, function (flow) {
+    .set(Protocol.Identifiable.idKey, 'nas')
+    .implement(Protocol.Queryable.store, function (flow) {
       storage[this.nas] = this.$clean
       flow.resolve(true)
     })
-    .implement(Storage.$$findOne, function (flow, nas) {
+    .implement(Protocol.Queryable.findOne, function (flow, nas) {
       flow.resolve(storage[nas])
     })
     .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
@@ -31,13 +31,13 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         inst2.$autoUpdate()
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(inst2.fullName).toBe('Larry Smith')
           delete storage[id]
           done()
@@ -51,14 +51,14 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         let people = Person.createCollection(inst2)
         people.$autoUpdate()
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(people[0].fullName).toBe('Larry Smith')
           delete storage[id]
           done()
@@ -72,14 +72,14 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         let unlisten = inst2.$autoUpdate()
         unlisten()
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(inst2.fullName).toBe('John Smith')
           delete storage[id]
           done()
@@ -93,7 +93,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
@@ -101,7 +101,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
         let unlisten = people.$autoUpdate()
         unlisten()
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(people[0].fullName).toBe('John Smith')
           delete storage[id]
           done()
@@ -115,7 +115,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
@@ -123,10 +123,10 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
           return firstName.slice(0, 1) !== 'L'
         })
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(inst2.fullName).toBe('John Smith')
           inst1.firstName = 'Bob'
-          inst1.save().then(function () {
+          inst1.$save().then(function () {
             expect(inst2.fullName).toBe('Bob Smith')
             delete storage[id]
             done()
@@ -141,7 +141,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
@@ -152,10 +152,10 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
           return firstName.slice(0, 1) !== 'L'
         })
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(people[0].fullName).toBe('John Smith')
           inst1.firstName = 'Bob'
-          inst1.save().then(function () {
+          inst1.$save().then(function () {
             expect(people[0].fullName).toBe('Bob Smith')
             delete storage[id]
             done()
@@ -170,7 +170,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
@@ -180,10 +180,10 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
           })
         })
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(inst2.fullName).toBe('John Smith')
           inst1.firstName = 'Bob'
-          inst1.save().then(function () {
+          inst1.$save().then(function () {
             expect(inst2.fullName).toBe('Bob Smith')
             delete storage[id]
             done()
@@ -198,7 +198,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
@@ -210,10 +210,10 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
           })
         })
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(inst2.fullName).toBe('John Smith')
           inst1.firstName = 'Bob'
-          inst1.save().then(function () {
+          inst1.$save().then(function () {
             expect(inst2.fullName).toBe('Bob Smith')
             delete storage[id]
             done()
@@ -229,14 +229,14 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     let spy = jasmine.createSpy()
 
     expect(inst1.$isNew).toBe(true)
-    inst1.save().then(function () {
+    inst1.$save().then(function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         inst2.$autoUpdate()
         inst2.$on('change', spy)
         inst1.firstName = 'Larry'
-        inst1.save().then(function () {
+        inst1.$save().then(function () {
           expect(spy.calls.count()).toBe(1)
           expect(spy.calls.argsFor(0)[0].firstName).toBe('Larry')
           expect(inst2.firstName).toBe('Larry')
@@ -244,7 +244,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
           inst2.firstName = 'John'
           spy.calls.reset()
 
-          inst2.save().then(function () {
+          inst2.$save().then(function () {
             expect(spy.calls.count()).toBe(0)
             delete storage[id]
             done()

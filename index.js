@@ -1,11 +1,16 @@
 const Model = require('./src/model')
 const Mixin = require('./src/mixin')
-const Storage = require('./src/storage')
+const Protocol = require('./src/protocol')
 const Collection = require('./src/collection')
 
-module.exports = { Model, Mixin, Storage, Collection }
+module.exports = { Model, Mixin, Protocol, Collection }
+
+let protocols = require('./src/protocols')
+for (let protocolName in protocols) {
+  Protocol[protocolName] = protocols[protocolName]
+}
 
 let mixins = require('./src/mixins')
-for (let builtin in mixins) {
-  Mixin[builtin] = mixins[builtin]
+for (let mixinName in mixins) {
+  Mixin[mixinName] = mixins[mixinName]
 }

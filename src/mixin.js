@@ -11,13 +11,15 @@ const $$usedMixins = Symbol('used')
 const $$methods = Symbol('methods')
 const $$classMethods = Symbol('classMethods')
 const $$implementations = Symbol('implementations')
+const $$models = Symbol('models')
+const $$requirements = Symbol('requirements')
 
 const DerivedProperty = require('./derived')
-
+const factory = require('./create')
 const makeEmitter = require('./emitter')
 
 function generateMixin (name) {
-  let klass = require('./create')(name, function (klass, args) {
+  let klass = factory(name, function (klass, args) {
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
   })
@@ -40,7 +42,7 @@ function generateMixin (name) {
     }
   }
 
-  klass[$$implementations] = {}
+  klass[$$implementations] = []
   klass[$$derivedProperties] = []
   klass[$$staticProperties] = []
   klass[$$findOne] = []
@@ -49,6 +51,8 @@ function generateMixin (name) {
   klass[$$usedMixins] = []
   klass[$$methods] = {}
   klass[$$classMethods] = {}
+  klass[$$models] = new Set()
+  klass[$$requirements] = new Set()
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
@@ -59,11 +63,6 @@ function generateMixin (name) {
 
   klass.derive = function (name, options, getter) {
     klass[$$derivedProperties].push({ name, options, getter })
-    return klass
-  }
-
-  klass.set = function (name, value) {
-    klass[$$staticProperties].push({ name, value })
     return klass
   }
 
@@ -104,46 +103,63 @@ function generateMixin (name) {
     return klass
   }
 
-  klass.implement = function (operation, priority, fn) {
-    const Storage = require('./storage')
-    if (typeof priority === 'function') {
-      fn = priority
-      priority = Storage.MEDIUM
-    }
-    fn[Symbol.for('priority')] = priority
-    if (klass[$$implementations][operation] == null) {
-      klass[$$implementations][operation] = [fn]
-    } else {
-      klass[$$implementations][operation].push(fn)
-    }
+  klass.set = function (item, value) {
+    klass[$$staticProperties].push({ item, value })
+    return klass
+  }
+
+  klass.implement = function (item, priority, fn) {
+    klass[$$implementations].push({item, priority, fn})
+    return klass
+  }
+
+  klass.require = function (protocol) {
+    klass[$$requirements].add(protocol)
     return klass
   }
 
   klass.prototype.augmentModel = function (model) {
-    augmentWithDerivedProperties(this, model)
-    augmentWithStaticProperties(this, model)
-    augmentWithMethods(this, model)
-    augmentWithClassMethods(this, model)
-    augmentWithMixins(this, model)
-    augmentWithImplementations(this, model)
-  }
-
-  function augmentWithImplementations (mixin, model) {
-    for (let operation of Object.getOwnPropertySymbols(klass[$$implementations])) {
-      if (klass[$$implementations][operation] != null) {
-        for (let fn of klass[$$implementations][operation]) {
-          model.implement(operation, fn[Symbol.for('priority')], function (...args) {
-            return fn.call(this, mixin, ...args)
-          })
-        }
-      }
+    if (!klass[$$models].has(model)) {
+      augmentWithDerivedProperties(this, model)
+      augmentWithMethods(this, model)
+      augmentWithClassMethods(this, model)
+      augmentWithMixins(this, model)
+      augmentWithProtocolRequirements(this, model)
+      augmentWithProtocolValue(this, model)
+      augmentWithProtocolImplementations(this, model)
+      klass[$$models].add(model)
     }
   }
 
-  function augmentWithStaticProperties (mixin, model) {
+  Object.defineProperty(klass.prototype, 'models', {
+    get: function () {
+      return this[$$models]
+    }
+  })
+
+  function augmentWithProtocolImplementations (mixin, model) {
+    for (let impl of klass[$$implementations]) {
+      let {item, priority, fn} = impl
+      if (typeof priority === 'function') {
+        fn = priority
+        priority = 500
+      }
+      model.implement(item, priority, function (...args) {
+        return fn.call(this, mixin, ...args)
+      })
+    }
+  }
+
+  function augmentWithProtocolRequirements (mixin, model) {
+    for (let protocol of klass[$$requirements]) {
+      protocol.augmentModel(model)
+    }
+  }
+
+  function augmentWithProtocolValue (mixin, model) {
     for (let staticArg of klass[$$staticProperties]) {
-      let { name, value } = staticArg
-      model.set(name, value)
+      let { item, value } = staticArg
+      model.set(item, value)
     }
   }
 

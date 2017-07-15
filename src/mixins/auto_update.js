@@ -1,11 +1,13 @@
-const {Mixin, Storage, Collection} = require('../..')
+const {Mixin} = require('../..')
+const Identifiable = require('../protocols/identifiable')
+const Collectable = require('../protocols/collectable')
 
 const $$autoUpdating = Symbol('autoUpdating')
 const $$eventKey = 'autoUpdate'
 
 function autoUpdateObject (mixin, conditional) {
-  if (this[$$autoUpdating]) {
-    return
+  if (this[$$autoUpdating] != null) {
+    this.$model.$off($$eventKey, this[$$autoUpdating])
   }
   let listen
   let self = this
@@ -36,7 +38,7 @@ function autoUpdateObject (mixin, conditional) {
   }
   let eventKey = mixin.eventKey(this)
   this.constructor.$on(eventKey, listen)
-  this[$$autoUpdating] = true
+  this[$$autoUpdating] = listen
   return () => {
     this.constructor.$off(eventKey, listen)
     delete this[$$autoUpdating]
@@ -44,14 +46,14 @@ function autoUpdateObject (mixin, conditional) {
 }
 
 function autoUpdateCollection (mixin, conditional) {
-  if (this.$isAutoUpdating) {
-    return 1
+  if (this[$$autoUpdating] != null) {
+    this.$model.$off($$eventKey, this[$$autoUpdating])
   }
   let collection = this
   let listen
   if (typeof conditional === 'function') {
     listen = function (source) {
-      let destination = collection.get(source)
+      let destination = collection.$get(source)
       if (destination === source || destination == null) {
         return
       }
@@ -69,55 +71,46 @@ function autoUpdateCollection (mixin, conditional) {
     }
   } else {
     listen = function (source) {
-      if (collection.get(source) === source) {
+      if (collection.$get(source) === source) {
         return
       }
-      collection.update(source.$clean, false)
+      collection.$update(source.$clean, false)
     }
   }
   this.$model.$on($$eventKey, listen)
-  this[$$autoUpdating] = true
+  this[$$autoUpdating] = listen
   return () => {
     this.$model.$off($$eventKey, listen)
     delete this[$$autoUpdating]
   }
 }
 
-function prepareCollection (mixin) {
-  let coll = this
-  coll.$on('mount', function (options) {
-    if (options.autoUpdate !== false && !coll.$isAutoUpdating) {
-      let deregister = coll.$autoUpdate(options.autoUpdate)
-      coll.$once('unmount', deregister)
-    }
-  })
-  coll.$autoUpdate = function (conditional) {
-    return autoUpdateCollection.call(this, mixin, conditional)
-  }
-  Object.defineProperty(coll, '$isAutoUpdating', {
-    get: function () { return this[$$autoUpdating] === true }
-  })
-}
-
-function emitAutoUpdate (mixin, flow) {
-  this.constructor.$emit(mixin.eventKey(this), this)
-  this.constructor.$emit($$eventKey, this)
-  return flow.next()
-}
-
 const AutoUpdateMixin = Mixin('AutoUpdateMixin')
-  .implement(Storage.$$store, 2000, emitAutoUpdate)
-  .implement(Collection.$$prepareCollection, prepareCollection)
+  .require(Identifiable)
+  .implement(Collectable.prepareCollection, function (mixin, coll) {
+    coll.$on('mount', function (options) {
+      if (options.autoUpdate !== false && !coll.$isAutoUpdating) {
+        let deregister = coll.$autoUpdate(options.autoUpdate)
+        coll.$once('unmount', deregister)
+      }
+    })
+    coll.$autoUpdate = function (conditional) {
+      return autoUpdateCollection.call(this, mixin, conditional)
+    }
+    Object.defineProperty(coll, '$isAutoUpdating', {
+      get: function () { return this[$$autoUpdating] != null }
+    })
+  })
   .method('$autoUpdate', autoUpdateObject)
   .derive('$isAutoUpdating', function () {
-    return this[$$autoUpdating] === true
+    return this[$$autoUpdating] != null
   })
 
 AutoUpdateMixin.$on('use', function (mixin, model) {
-  const Storage = require('../storage')
-  if (!model.didSet(Storage.$$idKey) && model.attributes().id == null) {
-    throw new Mixin.Error('The AutoUpdate mixin requires the receiving model to set `Storage.$$idKey` or have an \'id\' attribute', this)
-  }
+  model.$on('saved', function (object) {
+    object.constructor.$emit(mixin.eventKey(object), object)
+    object.constructor.$emit($$eventKey, object)
+  })
   model.$on('mount', function (object, options) {
     if (options.autoUpdate !== false && !object.$isAutoUpdating) {
       let deregister = object.$autoUpdate(options.autoUpdate)
@@ -127,8 +120,7 @@ AutoUpdateMixin.$on('use', function (mixin, model) {
 })
 
 AutoUpdateMixin.prototype.eventKey = function (object) {
-  const Storage = require('../storage')
-  return `${$$eventKey}(${Storage.idFor(object)})`
+  return `${$$eventKey}(${Identifiable.idFor(object)})`
 }
 
 module.exports = AutoUpdateMixin

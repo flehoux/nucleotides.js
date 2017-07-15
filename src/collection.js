@@ -5,22 +5,12 @@ const $$map = Symbol('map')
 
 const EmittingArray = require('./emitting_array')
 const Model = require('./model')
-const Storage = require('./storage')
-
-const $$prepareElement = Symbol.for('Collection.prepareElement')
-const $$prepareCollection = Symbol.for('Collection.prepareCollection')
+const Collectable = require('./protocols/collectable')
+const Identifiable = require('./protocols/identifiable')
 
 class Collection extends EmittingArray {
   static get [Symbol.species] () {
     return Collection
-  }
-
-  static get $$prepareElement () {
-    return $$prepareElement
-  }
-
-  static get $$prepareCollection () {
-    return $$prepareCollection
   }
 
   static create (model, ...args) {
@@ -43,7 +33,7 @@ class Collection extends EmittingArray {
       if (!(element instanceof this.$model)) {
         element = Reflect.construct(this.$model, [element])
       }
-      let result = this[$$prepareElement](element)
+      let result = this.prepareElement(element)
       if (Model.isInstance(result, element.constructor)) {
         element = result
       }
@@ -58,7 +48,7 @@ class Collection extends EmittingArray {
     }
     if (Model.isModel(modelClass)) {
       this[$$model] = modelClass
-      this[$$prepareCollection]()
+      this.prepareCollection()
     }
   }
 
@@ -78,56 +68,56 @@ class Collection extends EmittingArray {
     return results
   }
 
-  [$$prepareCollection] () {
-    if (typeof this.$model[$$prepareCollection] === 'function') {
-      this.$model[$$prepareCollection].call(this)
+  prepareCollection () {
+    if (Collectable.hasImplementationsFor(this.$model, 'prepareCollection')) {
+      Collectable.callAll(this.$model, 'prepareCollection', this)
     }
-    if (this.$model.didSet(Storage.$$idKey)) {
+    if (Identifiable.hasValueFor(this.$model, 'idKey')) {
       this.$on('add', function (elements) {
         for (let element of elements) {
-          let key = Storage.idFor(element)
+          let key = Identifiable.idFor(element)
           this[$$map][key] = element
         }
       })
       this.$on('remove', function (elements) {
         for (let element of elements) {
-          let key = Storage.idFor(element)
+          let key = Identifiable.idFor(element)
           delete this[$$map][key]
         }
       })
     }
   }
 
-  [$$prepareElement] (element) {
-    if (typeof this.$model[$$prepareElement] === 'function') {
-      this.$model[$$prepareElement].call(this, element)
+  prepareElement (element) {
+    if (Collectable.hasImplementationsFor(this.$model, 'prepareElement')) {
+      Collectable.callAll(this.$model, 'prepareElement', this, element)
     }
   }
 
-  get (id) {
+  $get (id) {
     if (id != null && typeof id === 'object') {
-      id = id[Storage.idKeyFor(this.$model)]
+      id = id[Identifiable.idKeyFor(this.$model)]
     }
     return this[$$map][id]
   }
 
-  has (id) {
+  $has (id) {
     if (id != null && typeof id === 'object') {
-      id = Storage.idFor(id)
+      id = Identifiable.idFor(id)
     }
     return this[$$map][id] != null
   }
 
-  replace (object) {
-    let existing = this.get(object)
+  $replace (object) {
+    let existing = this.$get(object)
     if (existing != null) {
       let idx = this.indexOf(existing)
       this.splice(idx, 1, object)
     }
   }
 
-  put (object) {
-    let existing = this.get(object)
+  $put (object) {
+    let existing = this.$get(object)
     if (existing != null) {
       let idx = this.indexOf(existing)
       this.splice(idx, 1, object)
@@ -136,16 +126,16 @@ class Collection extends EmittingArray {
     }
   }
 
-  remove (object) {
-    let existing = this.get(object)
+  $remove (object) {
+    let existing = this.$get(object)
     if (existing != null) {
       let idx = this.indexOf(existing)
       this.splice(idx, 1)
     }
   }
 
-  update (object, upsert = false) {
-    let existing = this.get(object)
+  $update (object, upsert = false) {
+    let existing = this.$get(object)
     if (existing != null) {
       if (Model.isInstance(object)) {
         object = object.$clean
@@ -154,6 +144,31 @@ class Collection extends EmittingArray {
     } else if (upsert) {
       this.push(object)
     }
+  }
+
+  $updateAll (items) {
+    let currentItems = this.slice(0)
+    let newItems = []
+    for (let item of items) {
+      let currentItem = this.$get(item)
+      if (currentItem != null) {
+        let idx = currentItems.indexOf(currentItem)
+        currentItems.splice(idx, 1)
+        if (Model.isInstance(item)) {
+          item = item.$clean
+        }
+        currentItem.$updateAttributes(item)
+        idx = items.indexOf(item)
+        items.splice(idx, 1, currentItem)
+      } else {
+        newItems.push(item)
+      }
+    }
+    this.push(...newItems)
+    this.sort(function (a, b) {
+      return items.indexOf(a) - items.indexOf(b)
+    })
+    return this
   }
 }
 

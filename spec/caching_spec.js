@@ -17,7 +17,7 @@ describe('A Model with cached derived properties', function () {
       })
       .derive('lazy', {cached: true}, spies.lazy)
       .derive('eager', {cached: true, eager: true}, spies.eager)
-      .derive('specificLazy', {cached: ['firstName']}, spies.specificLazy)
+      .derive('specificLazy', {cached: true, source: ['firstName']}, spies.specificLazy)
 
   beforeEach(function (done) {
     spies.lazy.calls.reset()

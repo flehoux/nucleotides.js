@@ -2,6 +2,8 @@
 
 const $$type = Symbol('type')
 const $$generator = Symbol('generator')
+
+const Identifiable = require('./protocols/identifiable')
 const EmittingArray = require('./emitting_array')
 
 class AttributeDefinitionException extends Error {
@@ -111,7 +113,7 @@ class Attribute {
         Object.defineProperty(this, 'collection', {value: true})
         typeDefinition = type[0]
       } else {
-        throw new AttributeDefinitionException('type', `Type for attribute ${this.name} can't be an array with multiple values`, type)
+        throw new AttributeDefinitionException('type', 'Type for attribute ' + this.name + ' can\'t be an array with multiple values', type)
       }
     } else {
       Object.defineProperty(this, 'collection', {value: false})
@@ -166,12 +168,21 @@ class Attribute {
   initializeArrayInTarget (object, value) {
     const Collection = require('./collection')
     let array
+    let attribute = this
+
     if (this.isModel) {
       array = Collection.create(this.baseType)
     } else {
       array = EmittingArray.create()
+      array.$on('adding', function (event) {
+        let {elements} = event
+        event.elements = elements.map(function (element) {
+          if (element != null) {
+            return attribute.generator(element)
+          }
+        })
+      })
     }
-    let attribute = this
 
     object.$data[this.name] = array
     if (this.isModel) {
@@ -203,12 +214,16 @@ class Attribute {
       let nextValue = this.generator(value)
       if (object.$data[this.name] !== nextValue) {
         let oldValue = object.$data[this.name]
-        if (this.isModel && oldValue != null) {
-          oldValue.$removeParent(object, object.$tracker(this.name))
-        }
-        object.$data[this.name] = nextValue
-        if (this.isModel && nextValue != null) {
-          nextValue.$addParent(object, object.$tracker(this.name))
+        if (this.isModel && Identifiable.isEqual(oldValue, nextValue)) {
+          oldValue.$updateAttributes(nextValue.$clean)
+        } else {
+          if (this.isModel && oldValue != null) {
+            oldValue.$removeParent(object, object.$tracker(this.name))
+          }
+          object.$data[this.name] = nextValue
+          if (this.isModel && nextValue != null) {
+            nextValue.$addParent(object, object.$tracker(this.name))
+          }
         }
         return true
       } else {
@@ -222,20 +237,14 @@ class Attribute {
     let newItems
     if (value != null) {
       if (typeof value[Symbol.iterator] === 'function') {
-        if (!this.isModel) {
-          value = value.map(this.generator.bind(this))
-        }
         newItems = value
       } else {
-        if (!this.isModel) {
-          value = this.generator(value)
-        }
         newItems = [value]
       }
     } else {
       newItems = []
     }
-    currentItems.splice(0, currentItems.length, ...newItems)
+    currentItems.$updateAll(newItems)
   }
 
   constainsModelInstance (parent, child) {

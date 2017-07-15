@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
-describe('A Flow instance', function () {
-  let Flow = require('../src/flow')
+describe('An AsyncFlow instance', function () {
+  let AsyncFlow = require('../src/async_flow')
 
   it('should call each stacked function and pass down arguments if the .next() is called', function (done) {
     let spy1 = jasmine.createSpy()
@@ -28,7 +28,7 @@ describe('A Flow instance', function () {
       flow.resolve(`yield ${arg}`)
     }
 
-    let flow = new Flow([fun1, fun2, fun3, fun4], 1)
+    let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
     flow.run().then(function () {
       expect(flow.successful).toBe(true)
       expect(flow.resolved).toBe('Received: yield 4')
@@ -59,7 +59,7 @@ describe('A Flow instance', function () {
       }, 0)
     }
 
-    let flow = new Flow([fun1, fun2], 1)
+    let flow = new AsyncFlow([fun1, fun2], 1)
     flow.run().then(function () {
       expect(flow.successful).toBe(true)
       expect(flow.resolved).toBe('Received: yield 2')
@@ -90,7 +90,7 @@ describe('A Flow instance', function () {
       }))
     }
 
-    let flow = new Flow([fun1, fun2], 1)
+    let flow = new AsyncFlow([fun1, fun2], 1)
     flow.run().then(function () {
       expect(flow.successful).toBe(true)
       expect(flow.resolved).toBe('Received: yield 2')
@@ -125,7 +125,7 @@ describe('A Flow instance', function () {
       flow.reject(`failed at ${arg}`)
     }
 
-    let flow = new Flow([fun1, fun2, fun3, fun4], 1)
+    let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
     flow.run().catch(function (reason) {
       expect(flow.failed).toBe(true)
       expect(reason).toBe('failed at 4')
@@ -158,7 +158,7 @@ describe('A Flow instance', function () {
       }))
     }
 
-    let flow = new Flow([fun1, fun2], 1)
+    let flow = new AsyncFlow([fun1, fun2], 1)
     flow.run().catch(function (reason) {
       expect(flow.failed).toBe(true)
       expect(reason).toBe('failed at 2')
@@ -185,7 +185,7 @@ describe('A Flow instance', function () {
       flow.resolve(`yield ${arg}`)
     }
 
-    let flow = new Flow([fun1, fun2, fun3, fun4], 1)
+    let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
     flow.run()
 
     expect(flow.successful).toBe(true)
@@ -206,7 +206,7 @@ describe('A Flow instance', function () {
       flow.reject(`failed at ${arg}`)
     }
 
-    let flow = new Flow([fun1, fun2, fun3, fun4], 1)
+    let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
     flow.run().catch(function () {})
 
     expect(flow.failed).toBe(true)

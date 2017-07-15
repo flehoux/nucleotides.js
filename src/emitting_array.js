@@ -106,8 +106,12 @@ class EmittingArray extends Array {
     return result
   }
 
-  clear () {
+  $clear () {
     return this.splice(0, this.length)
+  }
+
+  $updateAll (items) {
+    this.splice(0, this.length, ...items)
   }
 }
 
