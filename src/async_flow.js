@@ -42,7 +42,7 @@ class AsyncFlow extends Flow {
     }
   }
 
-  next (...args) {
+  continue (...args) {
     if (this.last) {
       return Promise.resolve(null)
     } else {

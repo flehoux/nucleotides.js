@@ -3,7 +3,7 @@
 describe('An AsyncFlow instance', function () {
   let AsyncFlow = require('../src/async_flow')
 
-  it('should call each stacked function and pass down arguments if the .next() is called', function (done) {
+  it('should call each stacked function and pass down arguments if the .continue() is called', function (done) {
     let spy1 = jasmine.createSpy()
     let spy2 = jasmine.createSpy()
     let spy3 = jasmine.createSpy()
@@ -12,16 +12,16 @@ describe('An AsyncFlow instance', function () {
     let fun1 = (flow, arg) => {
       spy1(arg)
       return flow
-        .next(arg + 1)
+        .continue(arg + 1)
         .then((val) => `Received: ${val}`)
     }
     let fun2 = (flow, arg) => {
       spy2(arg)
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun3 = (flow, arg) => {
       spy3(arg)
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun4 = (flow, arg) => {
       spy4(arg)
@@ -49,7 +49,7 @@ describe('An AsyncFlow instance', function () {
     let fun1 = (flow, arg) => {
       spy1(arg)
       return flow
-        .next(arg + 1)
+        .continue(arg + 1)
         .then((val) => `Received: ${val}`)
     }
     let fun2 = (flow, arg) => {
@@ -78,7 +78,7 @@ describe('An AsyncFlow instance', function () {
     let fun1 = (flow, arg) => {
       spy1(arg)
       return flow
-        .next(arg + 1)
+        .continue(arg + 1)
         .then((val) => `Received: ${val}`)
     }
     let fun2 = (flow, arg) => {
@@ -102,7 +102,7 @@ describe('An AsyncFlow instance', function () {
     expect(flow.completed).toBe(false)
   })
 
-  it('should call each stacked function, pass down arguments and bubble up failure if the .next() is called', function (done) {
+  it('should call each stacked function, pass down arguments and bubble up failure if the .continue() is called', function (done) {
     let spy1 = jasmine.createSpy()
     let spy2 = jasmine.createSpy()
     let spy3 = jasmine.createSpy()
@@ -110,15 +110,15 @@ describe('An AsyncFlow instance', function () {
 
     let fun1 = (flow, arg) => {
       spy1(arg)
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun2 = (flow, arg) => {
       spy2(arg)
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun3 = (flow, arg) => {
       spy3(arg)
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun4 = (flow, arg) => {
       spy4(arg)
@@ -146,7 +146,7 @@ describe('An AsyncFlow instance', function () {
     let fun1 = (flow, arg) => {
       spy1(arg)
       return flow
-        .next(arg + 1)
+        .continue(arg + 1)
         .then((val) => `Received: ${val}`)
     }
     let fun2 = (flow, arg) => {
@@ -173,13 +173,13 @@ describe('An AsyncFlow instance', function () {
 
   it('should provide resolved value immediately if no promise chaining occured', function () {
     let fun1 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun2 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun3 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun4 = (flow, arg) => {
       flow.resolve(`yield ${arg}`)
@@ -194,13 +194,13 @@ describe('An AsyncFlow instance', function () {
 
   it('should provide rejection reason immediately if no promise chaining occured', function () {
     let fun1 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun2 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun3 = (flow, arg) => {
-      return flow.next(arg + 1)
+      return flow.continue(arg + 1)
     }
     let fun4 = (flow, arg) => {
       flow.reject(`failed at ${arg}`)

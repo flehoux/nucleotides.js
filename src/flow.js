@@ -14,7 +14,7 @@ module.exports = class Flow {
     }
   }
 
-  next (...args) {
+  continue (...args) {
     if (this.last) {
       return null
     } else {
