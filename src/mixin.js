@@ -21,6 +21,7 @@ const makeEmitter = require('./emitter')
 function generateMixin (name) {
   let klass = factory(name, function (klass, args) {
     klass[$$constructor].apply(this, args)
+    this[$$models] = new Set()
     klass.$emit('new', this)
   })
 
@@ -51,7 +52,6 @@ function generateMixin (name) {
   klass[$$usedMixins] = []
   klass[$$methods] = {}
   klass[$$classMethods] = {}
-  klass[$$models] = new Set()
   klass[$$requirements] = new Set()
 
   klass.construct = function (fn) {
@@ -119,7 +119,7 @@ function generateMixin (name) {
   }
 
   klass.prototype.augmentModel = function (model) {
-    if (!klass[$$models].has(model)) {
+    if (!this[$$models].has(model)) {
       augmentWithDerivedProperties(this, model)
       augmentWithMethods(this, model)
       augmentWithClassMethods(this, model)
@@ -127,7 +127,7 @@ function generateMixin (name) {
       augmentWithProtocolRequirements(this, model)
       augmentWithProtocolValue(this, model)
       augmentWithProtocolImplementations(this, model)
-      klass[$$models].add(model)
+      this[$$models].add(model)
     }
   }
 
