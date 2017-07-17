@@ -122,6 +122,24 @@ function generateProtocol (name) {
     }
   }
 
+  protocol.hasImplementationFromMixin = function (object, mixin, name) {
+    let hasImplementations = this.hasImplementationsFor(object, name)
+    if (hasImplementations) {
+      let funs = this.implementationsFor(object, name)
+      for (let fn of funs) {
+        let fnMixin = fn[Symbol.for('mixin')]
+        if (fnMixin == null) {
+          continue
+        } else {
+          if (mixin === fnMixin || mixin === fnMixin.constructor) {
+            return true
+          }
+        }
+      }
+    }
+    return false
+  }
+
   protocol.implementationsFor = function (object, name) {
     const Model = require('./model')
     if (protocol[$$methods][name] == null) {
@@ -162,6 +180,20 @@ function generateProtocol (name) {
 
   protocol.call = function (target, name, ...args) {
     this.implementationFor(target, name).call(target, ...args)
+  }
+
+  protocol.callFromMixin = function (target, name, mixin, ...args) {
+    let funs = this.implementationsFor(target, name)
+    for (let fn of funs) {
+      let fnMixin = fn[Symbol.for('mixin')]
+      if (fnMixin == null) {
+        continue
+      } else {
+        if (mixin === fnMixin || mixin === fnMixin.constructor) {
+          fn.call(target, ...args)
+        }
+      }
+    }
   }
 
   protocol.callAll = function (target, name, ...args) {
