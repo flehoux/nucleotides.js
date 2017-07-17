@@ -4,6 +4,9 @@ const Storable = require('./storable')
 const $$isNew = Symbol('isNew')
 
 function ensureInstance (response) {
+  if (response == null) {
+    return
+  }
   let value
   const Model = require('../model')
   if (response instanceof Success) {
@@ -103,7 +106,9 @@ function doSave (...args) {
     this.constructor.$emit('saved', this)
 
     let res = ensureInstance.call(this.constructor, resp)
-    this.$response = res.$response
+    if (res != null) {
+      this.$response = res.$response
+    }
     return this
   })
 }
