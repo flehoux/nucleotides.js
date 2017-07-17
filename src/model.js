@@ -211,6 +211,7 @@ function generateModel (name) {
       if (Object.keys(difference).length > 0) {
         this.$didChange(difference)
       }
+      return this
     },
 
     $ensure: function (names) {
