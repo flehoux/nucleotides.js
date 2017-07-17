@@ -232,6 +232,8 @@ function Protocol (...args) {
   return generateProtocol(...args)
 }
 
+Protocol.Error = ProtocolError
+
 Protocol.augmentModelWithValue = function (model, item, value) {
   const {protocol} = item
   protocol.augmentModelWithValue(model, item, value)
