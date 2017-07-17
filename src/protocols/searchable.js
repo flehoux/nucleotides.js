@@ -7,30 +7,61 @@ const Searchable = Protocol('Searchable')
     if (typeof options === 'string') {
       options = {key: options, unique: false}
     }
-    if (model.attributes()[options.key] == null) {
-      throw new Error('Model ' + model.name + ' does not define field ' + options.key + ' before setting it as searchable')
-    } else {
-      let searchMethodName = 'by' + options.key.slice(0, 1).toUpperCase() + options.key.slice(1)
-      if (options.unique === true) {
-        model[searchMethodName] = function (value, params) {
-          if (Queryable.hasImplementationsFor(model, 'findOne')) {
-            let newParams = Object.assign({[options.key]: value}, params)
-            return model.findOne(newParams)
-          } else {
-            throw new Error('Model ' + model.name + ' does not implement findOne from the Queryable protocol')
-          }
+    let searchMethodName = 'by' + options.key.slice(0, 1).toUpperCase() + options.key.slice(1)
+    if (options.unique === true) {
+      model[searchMethodName] = function (value, params) {
+        if (Queryable.hasImplementationsFor(model, 'findOne')) {
+          let newParams = Object.assign({[options.key]: value}, params)
+          return model.findOne(newParams)
+        } else {
+          throw new Error(`Model ${model.name} does not implement Queryable.findOne`)
         }
-      } else {
-        model[searchMethodName] = function (value, params) {
-          if (Queryable.hasImplementationsFor(model, 'findMany')) {
-            let newParams = Object.assign({[options.key]: value}, params)
-            return model.findMany(newParams)
-          } else {
-            throw new Error('Model ' + model.name + ' does not implement findMany from the Queryable protocol')
-          }
+      }
+    } else {
+      model[searchMethodName] = function (value, params) {
+        if (Queryable.hasImplementationsFor(model, 'findMany')) {
+          let newParams = Object.assign({[options.key]: value}, params)
+          return model.findMany(newParams)
+        } else {
+          throw new Error(`Model ${model.name} does not implement Queryable.findMany`)
         }
       }
     }
   })
+
+Object.assign(Searchable, {
+  hasField: function (model, fieldName) {
+    const fields = Searchable.valueFor(model, 'field')
+    if (fields != null) {
+      return Searchable.valueFor(model, 'field').some(function (item) {
+        if (item === fieldName) {
+          return true
+        } else if (typeof item === 'object' && item.key === fieldName) {
+          return true
+        }
+        return false
+      })
+    }
+  },
+  fieldDefinition: function (model, fieldName) {
+    const fields = Searchable.valueFor(model, 'field')
+    if (fields != null) {
+      const field = fields.find(function (item) {
+        if (item === fieldName) {
+          return true
+        } else if (typeof item === 'object' && item.key === fieldName) {
+          return true
+        }
+        return false
+      })
+      if (typeof field === 'object') {
+        return field
+      }
+      if (typeof field === 'string') {
+        return {key: field, unique: false}
+      }
+    }
+  }
+})
 
 module.exports = Searchable
