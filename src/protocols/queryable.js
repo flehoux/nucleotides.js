@@ -31,6 +31,9 @@ function ensureListOfInstance (response) {
   } else {
     values = response
   }
+  if (!Array.isArray(values)) {
+    values = []
+  }
   values = values.map(function (value) {
     if (Model.isModel(this) && !(value instanceof this)) {
       return Storable.decode(this, value)
