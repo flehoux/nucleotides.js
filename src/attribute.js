@@ -100,10 +100,19 @@ class Attribute {
   }
 
   parseOptions (options) {
-    const {require, initial, accept} = options
+    const {
+      require = false,
+      initial,
+      accept
+    } = options
     Object.defineProperty(this, 'require', {value: require})
     Object.defineProperty(this, 'initial', {value: initial})
     Object.defineProperty(this, 'accept', {value: accept})
+
+    delete options.require
+    delete options.initial
+    delete options.accept
+    Object.defineProperty(this, 'extra', {value: options})
   }
 
   parseType (type) {
@@ -134,7 +143,8 @@ class Attribute {
   }
 
   augmentModel (klass) {
-    let attribute = this
+    const attribute = this
+    const Searchable = require('./protocols/searchable')
     Object.defineProperty(klass.prototype, this.name, {
       set: function (value) {
         if (attribute.updateInTarget(this, value) && !this.collection) {
@@ -149,6 +159,12 @@ class Attribute {
       object.$setTracker(attribute.name, Symbol(`attributes:${attribute.name}`))
       attribute.initializeInTarget(object)
     })
+    if (attribute.extra.searchable === true) {
+      klass.set(Searchable.field, {
+        key: attribute.name,
+        unique: attribute.extra.unique === true
+      })
+    }
   }
 
   initializeInTarget (object) {
