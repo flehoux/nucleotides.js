@@ -52,11 +52,28 @@ class AsyncFlow extends Flow {
     }
   }
 
+  continueAsync (...args) {
+    let flow = this
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve(flow.continue(...args))
+      })
+    })
+  }
+
   resolve (value) {
     if (!(value instanceof Promise)) {
       this.result = {status: AsyncFlow.successCode, value: value}
     }
     this[$$resolver](value)
+  }
+
+  resolveAsync (value) {
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve(value)
+      })
+    })
   }
 
   reject (reason) {
