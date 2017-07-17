@@ -1,40 +1,47 @@
 const makeEmitter = require('./emitter')
 
-class EmittingArray extends Array {
-  static get [Symbol.species] () {
-    return EmittingArray
-  }
+let EmittingArray = function () {}
 
-  static create (...args) {
-    let newArray = Reflect.construct(this, args)
-    return new Proxy(newArray, this.proxyHandler)
-  }
-
-  static get proxyHandler () {
-    return {
-      set: function (target, property, value) {
-        const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
-        if (isInapplicableType || parseFloat(property).toString() !== property) {
-          target[property] = value
-          return true
-        }
-        let oldValue = target[property]
-        let [newValue] = target.prepareElements([value])
-        if (newValue !== oldValue) {
-          target[property] = newValue
-          if (oldValue != null) {
-            target.$emit('remove', [oldValue])
-          }
-          if (newValue != null) {
-            target.$emit('add', [newValue])
-          }
-        }
+Object.assign(EmittingArray, {
+  create: function (...args) {
+    let newArray = new EmittingArray()
+    let proxied = new Proxy(newArray, this.proxyHandler)
+    proxied.push(...args)
+    return proxied
+  },
+  proxyHandler: {
+    set: function (target, property, value) {
+      const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
+      if (isInapplicableType || parseFloat(property).toString() !== property) {
+        target[property] = value
         return true
       }
+      let oldValue = target[property]
+      let [newValue] = target.prepareElements([value])
+      if (newValue !== oldValue) {
+        target[property] = newValue
+        if (oldValue != null) {
+          target.$emit('remove', [oldValue])
+        }
+        if (newValue != null) {
+          target.$emit('add', [newValue])
+        }
+      }
+      return true
     }
   }
+})
 
-  prepareElements (elements) {
+Object.defineProperty(EmittingArray, Symbol.species, {
+  get: function () {
+    return EmittingArray
+  }
+})
+
+EmittingArray.prototype = Object.create(Array.prototype)
+
+Object.assign(EmittingArray.prototype, {
+  prepareElements: function (elements) {
     if (elements.length === 0) return elements
     let event = {elements, reason: null, canceled: false}
     this.$emit('adding', event)
@@ -43,23 +50,23 @@ class EmittingArray extends Array {
     } else {
       throw new Error(event.reason)
     }
-  }
+  },
 
-  push (...args) {
+  push: function (...args) {
     let elements = this.prepareElements(args)
-    let result = super.push(...elements)
+    let result = Array.prototype.push.call(this, ...elements)
     this.$emit('add', elements)
     return result
-  }
+  },
 
-  unshift (...args) {
+  unshift: function (...args) {
     let elements = this.prepareElements(args)
-    let result = super.unshift(...elements)
+    let result = Array.prototype.unshift.call(this, ...elements)
     this.$emit('add', elements)
     return result
-  }
+  },
 
-  splice (start, deleteCount, ...newElements) {
+  splice: function (start, deleteCount, ...newElements) {
     let removed = []
     newElements = this.prepareElements(newElements)
     if (deleteCount !== 0) {
@@ -69,7 +76,7 @@ class EmittingArray extends Array {
         removed = this.slice(start, start + deleteCount)
       }
     }
-    let result = super.splice(start, deleteCount, ...newElements)
+    let result = Array.prototype.splice.call(this, start, deleteCount, ...newElements)
     if (removed.length > 0) {
       this.$emit('remove', removed)
     }
@@ -77,43 +84,43 @@ class EmittingArray extends Array {
       this.$emit('add', newElements)
     }
     return result
-  }
+  },
 
-  shift () {
-    var result = super.shift()
+  shift: function () {
+    var result = Array.prototype.shift.call(this)
     if (result != null) {
       this.$emit('remove', [result])
     }
     return result
-  }
+  },
 
-  pop () {
-    var result = super.pop()
+  pop: function () {
+    var result = Array.prototype.pop.call(this)
     if (result != null) {
       this.$emit('remove', [result])
     }
     return result
-  }
+  },
 
-  fill (value, start, end) {
+  fill: function (value, start, end) {
     let newElements = this.prepareElements([value])
     let removed = this.slice(start, end)
-    let result = super.fill(newElements[0], start, end)
+    let result = Array.prototype.fill.call(this, newElements[0], start, end)
     if (removed.length > 0) {
       this.$emit('remove', removed)
       this.$emit('add', newElements)
     }
     return result
-  }
+  },
 
-  $clear () {
+  $clear: function () {
     return this.splice(0, this.length)
-  }
+  },
 
-  $updateAll (items) {
+  $updateAll: function (items) {
     this.splice(0, this.length, ...items)
   }
-}
+})
 
 makeEmitter(EmittingArray.prototype)
 
