@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A model defined with a storage implementation', function () {
-  const {Model, Protocol} = require('..')
+  const {Model, Protocol} = require('../..')
   var storage = {}
 
   const Person = Model('Person')
@@ -12,10 +12,10 @@ describe('A model defined with a storage implementation', function () {
     })
     .implement(Protocol.Queryable.store, function (flow) {
       storage[this.nas] = this.$clean
-      flow.resolve(true)
+      flow.resolve(new Protocol.Queryable.Success())
     })
     .implement(Protocol.Queryable.findOne, function (flow, nas) {
-      flow.resolve(storage[nas])
+      flow.resolve(new Protocol.Queryable.Success(storage[nas]))
     })
     .implement(Protocol.Queryable.findMany, function (flow, lastName) {
       let result = []
@@ -25,11 +25,11 @@ describe('A model defined with a storage implementation', function () {
           result.push(object)
         }
       }
-      flow.resolve(result)
+      flow.resolve(new Protocol.Queryable.Success(result))
     })
     .implement(Protocol.Queryable.remove, function (flow) {
       delete storage[this.nas]
-      flow.resolve(true)
+      flow.resolve(new Protocol.Queryable.Success(true))
     })
 
   it('should be able to create and store data for an instance with Person.create()', function (done) {
@@ -125,16 +125,16 @@ describe('A model defined with a storage implementation', function () {
 })
 
 describe('A model using a mixin that defines a storage implementation', function () {
-  const {Model, Mixin, Protocol} = require('..')
+  const {Model, Mixin, Protocol} = require('../..')
   var storage = {}
 
   const StorageMixin = Mixin('Storage')
     .implement(Protocol.Queryable.store, function (mixin, flow) {
       storage[this[mixin.key]] = this.$clean
-      flow.resolve(true)
+      flow.resolve(new Protocol.Queryable.Success(true))
     })
     .implement(Protocol.Queryable.findOne, function (mixin, flow, key) {
-      flow.resolve(storage[key])
+      flow.resolve(new Protocol.Queryable.Success(storage[key]))
     })
     .implement(Protocol.Queryable.findMany, function (mixin, flow, key) {
       let result = []
@@ -144,11 +144,11 @@ describe('A model using a mixin that defines a storage implementation', function
           result.push(object)
         }
       }
-      flow.resolve(result)
+      flow.resolve(new Protocol.Queryable.Success(result))
     })
     .implement(Protocol.Queryable.remove, function (mixin, flow) {
       delete storage[this[mixin.key]]
-      flow.resolve(true)
+      flow.resolve(new Protocol.Queryable.Success(true))
     })
 
   const Person = Model('Person')

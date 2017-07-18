@@ -18,10 +18,10 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     .set(Protocol.Identifiable.idKey, 'nas')
     .implement(Protocol.Queryable.store, function (flow) {
       storage[this.nas] = this.$clean
-      flow.resolve(true)
+      flow.resolve(new Protocol.Queryable.Success(true))
     })
     .implement(Protocol.Queryable.findOne, function (flow, nas) {
-      flow.resolve(storage[nas])
+      flow.resolve(new Protocol.Queryable.Success(storage[nas]))
     })
     .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
     .use(new Mixin.AutoUpdate({}))

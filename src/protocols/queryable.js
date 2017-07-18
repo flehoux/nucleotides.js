@@ -3,7 +3,7 @@ const Identifiable = require('./identifiable')
 const Storable = require('./storable')
 const $$isNew = Symbol('isNew')
 
-function ensureInstance (response) {
+function ensureInstance (response, model) {
   if (response == null) {
     return
   }
@@ -12,42 +12,45 @@ function ensureInstance (response) {
   if (response instanceof Success) {
     value = response.result
   } else {
-    value = response
+    throw new Protocol.Error('AsyncFlow did not return a Queryable.Success object')
   }
-  if (Model.isModel(this) && !(value instanceof this)) {
-    value = Storable.decode(this, value)
+  if (value == null) {
+    return
   }
-  if (response instanceof Success) {
+  if (Model.isModel(model) && !(value instanceof model)) {
+    value = Storable.decode(model, value)
+  }
+  if (Model.isInstance(value)) {
+    value.$isNew = false
+  }
+  if (typeof value === 'object') {
     value.$response = response
   }
-  value.$isNew = false
   return value
 }
 
-function ensureListOfInstance (response) {
+function ensureListOfInstance (response, model) {
   const Collection = require('../collection')
   const Model = require('../model')
-  let result = Collection.create(this)
+  let result = Collection.create(model)
   let values
   if (response instanceof Success) {
     values = response.result
   } else {
-    values = response
+    throw new Protocol.Error('AsyncFlow did not return a Queryable.Success object')
   }
   if (!Array.isArray(values)) {
     values = []
   }
-  values = values.map(function (value) {
-    if (Model.isModel(this) && !(value instanceof this)) {
-      return Storable.decode(this, value)
+  values = values.map((value) => {
+    if (Model.isModel(model) && !(value instanceof model)) {
+      return Storable.decode(model, value)
     } else {
       return value
     }
   })
   result.push(...values)
-  if (response instanceof Success) {
-    result.$response = response
-  }
+  result.$response = response
   return result
 }
 
@@ -55,12 +58,12 @@ function doFindOne (...args) {
   let promise = Queryable.findOne(this, ...args)
   let flow = promise.$flow
   if (flow.successful) {
-    let result = ensureInstance.call(this, flow.resolved)
+    let result = ensureInstance(flow.resolved, this)
     promise = Promise.resolve(result)
     promise.$result = result
     return promise
   } else {
-    return promise.then(ensureInstance.bind(this))
+    return promise.then((response) => ensureInstance(response, this))
   }
 }
 
@@ -68,12 +71,12 @@ function doFindMany (...args) {
   let promise = Queryable.findMany(this, ...args)
   let flow = promise.$flow
   if (flow.successful) {
-    let result = ensureListOfInstance.call(this, flow.resolved)
+    let result = ensureListOfInstance(flow.resolved, this)
     promise = Promise.resolve(result)
     promise.$result = result
     return promise
   } else {
-    return promise.then(ensureListOfInstance.bind(this))
+    return promise.then((response) => ensureListOfInstance(response, this))
   }
 }
 
@@ -114,7 +117,7 @@ function doSave (...args) {
 }
 
 class Success {
-  constructor (code, result, data, origin) {
+  constructor (result, code, data, origin) {
     this.code = code
     this.result = result
     this.data = data
@@ -123,7 +126,7 @@ class Success {
 }
 
 class Failure {
-  constructor (code, message, data, origin) {
+  constructor (message, code, data, origin) {
     this.code = code
     this.message = message
     this.data = data
