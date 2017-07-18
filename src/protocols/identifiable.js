@@ -8,11 +8,6 @@ const Identifiable = Protocol('Identifiable')
         return Identifiable.idFor(this)
       }
     })
-    Object.defineProperty(klass, '$idKey', {
-      get: function () {
-        return Identifiable.idKey(this)
-      }
-    })
   })
   .value('url', function (klass) {
     Object.defineProperty(klass, '$url', {
@@ -52,8 +47,8 @@ Object.assign(Identifiable, {
     const Model = require('../model')
     if (Model.isInstance(object)) {
       let components = [this.urlFor(object.constructor)]
-      if (object.$parent != null && object.$parent.hasValue(Identifiable.url)) {
-        components.unshift(object.$parent.$url)
+      if (object.$parentUrl != null) {
+        components.unshift(object.$parentUrl)
       }
       if (method !== 'POST') {
         components.push(Identifiable.idFor(object))
