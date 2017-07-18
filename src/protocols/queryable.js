@@ -1,6 +1,7 @@
 const Protocol = require('../protocol')
 const Identifiable = require('./identifiable')
 const Storable = require('./storable')
+const CollectablePromise = require('../collectable_promise')
 const $$isNew = Symbol('isNew')
 
 function ensureInstance (response, model) {
@@ -74,10 +75,14 @@ function doFindMany (...args) {
     let result = ensureListOfInstance(flow.resolved, this)
     promise = Promise.resolve(result)
     promise.$result = result
-    return promise
   } else {
-    return promise.then((response) => ensureListOfInstance(response, this))
+    promise = promise.then((response) => {
+      let result = ensureListOfInstance(response, this)
+      promise.$result = result
+      return result
+    })
   }
+  return new CollectablePromise(promise, this)
 }
 
 function doDelete (...args) {
