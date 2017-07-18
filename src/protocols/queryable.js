@@ -52,8 +52,8 @@ function ensureListOfInstance (response) {
 }
 
 function doFindOne (...args) {
-  let flow = Queryable.getAsyncMiddleware(this, 'findOne', ...args)
-  let promise = flow.run()
+  let promise = Queryable.findOne(this, ...args)
+  let flow = promise.$flow
   if (flow.successful) {
     let result = ensureInstance.call(this, flow.resolved)
     promise = Promise.resolve(result)
@@ -65,8 +65,8 @@ function doFindOne (...args) {
 }
 
 function doFindMany (...args) {
-  let flow = Queryable.getAsyncMiddleware(this, 'findMany', ...args)
-  let promise = flow.run()
+  let promise = Queryable.findMany(this, ...args)
+  let flow = promise.$flow
   if (flow.successful) {
     let result = ensureListOfInstance.call(this, flow.resolved)
     promise = Promise.resolve(result)
@@ -78,7 +78,7 @@ function doFindMany (...args) {
 }
 
 function doDelete (...args) {
-  return Queryable.getAsyncMiddleware(this, 'remove', ...args).run()
+  return Queryable.remove(this, ...args)
 }
 
 function doCreate (...args) {
@@ -99,7 +99,7 @@ function doCreate (...args) {
 }
 
 function doSave (...args) {
-  let promise = Queryable.getAsyncMiddleware(this, 'store', ...args).run()
+  let promise = Queryable.store(this, ...args)
   return promise.then((resp) => {
     this.$isNew = false
     this.$emit('saved')
@@ -133,16 +133,16 @@ class Failure {
 
 const Queryable = Protocol('Queryable')
   .requires(Identifiable)
-  .method('findOne', function (model) {
+  .method('findOne', {mode: 'async_flow'}, function (model) {
     model.findOne = doFindOne
   })
-  .method('findMany', function (model) {
+  .method('findMany', {mode: 'async_flow'}, function (model) {
     model.findMany = doFindMany
   })
-  .method('remove', function (model) {
+  .method('remove', {mode: 'async_flow'}, function (model) {
     model.prototype.$remove = doDelete
   })
-  .method('store', function (model) {
+  .method('store', {mode: 'async_flow'}, function (model) {
     model.create = doCreate
     model.prototype.$save = doSave
     Object.defineProperty(model.prototype, '$isNew', {

@@ -183,6 +183,22 @@ function generateModel (name) {
     return klass
   }
 
+  klass.implements = function (protocolImpl) {
+    const {symbol, protocol, key} = protocolImpl
+    if (this.hasOwnProperty(symbol)) {
+      return protocol.hasImplementationsFor(this, key)
+    }
+    return false
+  }
+
+  klass.hasValue = function (protocolImpl) {
+    const {symbol, protocol, key} = protocolImpl
+    if (this.hasOwnProperty(symbol)) {
+      return protocol.hasValueFor(this, key)
+    }
+    return false
+  }
+
   klass.derive('$clean', {cache: true}, function () {
     const data = {}
     const Collection = require('./collection')

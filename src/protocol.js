@@ -29,8 +29,8 @@ function generateProtocol (name) {
     constructor.apply(this, args)
   })
 
-  protocol[$$methods] = {}
-  protocol[$$values] = {}
+  protocol[$$methods] = new Set()
+  protocol[$$values] = new Set()
   protocol[$$requirements] = new Set()
 
   const uniqueKey = Symbol('key')
@@ -50,15 +50,41 @@ function generateProtocol (name) {
     return protocol
   }
 
-  protocol.method = function (name, hook = identity) {
-    protocol[$$methods][name] = {
+  protocol.method = function (name, options, hook = identity) {
+    if (typeof options === 'function') {
+      hook = options
+      options = null
+    }
+    if (options == null) {
+      options = {mode: 'single'}
+    }
+    let method
+    if (options.mode === 'single') {
+      method = function (target, ...args) {
+        return protocol.call(target, name, ...args)
+      }
+    } else if (options.mode === 'all') {
+      method = function (target, ...args) {
+        return protocol.callAll(target, name, ...args)
+      }
+    } else if (options.mode === 'flow') {
+      method = function (target, ...args) {
+        return protocol.getMiddleware(target, name, ...args).run()
+      }
+    } else if (options.mode === 'async_flow') {
+      method = function (target, ...args) {
+        return protocol.getAsyncMiddleware(target, name, ...args).run()
+      }
+    }
+    Object.assign(method, {
       hook,
       protocol,
+      options,
+      key: name,
       symbol: Symbol(`${protocol.name}.${name}`)
-    }
-    Object.defineProperty(protocol, name, {
-      get: function () { return this[$$methods][name] }
     })
+    protocol[$$methods].add(name)
+    Object.defineProperty(protocol, name, {value: method})
     return protocol
   }
 
@@ -70,14 +96,24 @@ function generateProtocol (name) {
     if (options == null) {
       options = {}
     }
-    protocol[$$values][name] = {
+    let accessor = function (target) {
+      const Model = require('./model')
+      if (Model.isInstance(target)) {
+        return protocol.valueFor(target.constructor, name)
+      } else if (Model.isModel(target)) {
+        return protocol.valueFor(target, name)
+      }
+    }
+    Object.assign(accessor, {
       hook,
       options,
       protocol,
+      key: name,
       symbol: Symbol(`Value: ${name}`)
-    }
+    })
+    protocol[$$values].add(name)
     Object.defineProperty(protocol, name, {
-      get: function () { return this[$$values][name] }
+      value: accessor
     })
     return protocol
   }
@@ -86,39 +122,43 @@ function generateProtocol (name) {
     return protocol[$$values]
   }
 
+  protocol.methods = function () {
+    return protocol[$$methods]
+  }
+
   protocol.hasValueFor = function (object, name) {
     const Model = require('./model')
-    if (protocol[$$values][name] == null) {
+    if (!protocol[$$values].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define value ${name}`, name)
     }
     if (Model.isModel(object)) {
-      return object[protocol[$$values][name].symbol] != null
+      return object[protocol[name].symbol] != null
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[$$values][name].symbol] != null
+      return object.constructor[protocol[name].symbol] != null
     }
   }
 
   protocol.valueFor = function (object, name) {
     const Model = require('./model')
-    if (protocol[$$values][name] == null) {
+    if (!protocol[$$values].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define value ${name}`, name)
     }
     if (Model.isModel(object)) {
-      return object[protocol[$$values][name].symbol]
+      return object[protocol[name].symbol]
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[$$values][name].symbol]
+      return object.constructor[protocol[name].symbol]
     }
   }
 
   protocol.hasImplementationsFor = function (object, name) {
     const Model = require('./model')
-    if (protocol[$$methods][name] == null) {
+    if (!protocol[$$methods].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define method ${name}`, name)
     }
     if (Model.isModel(object)) {
-      return object[protocol[$$methods][name].symbol] != null
+      return object[protocol[name].symbol] != null
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[$$methods][name].symbol] != null
+      return object.constructor[protocol[name].symbol] != null
     }
   }
 
@@ -142,47 +182,29 @@ function generateProtocol (name) {
 
   protocol.implementationsFor = function (object, name) {
     const Model = require('./model')
-    if (protocol[$$methods][name] == null) {
+    if (!protocol[$$methods].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define method ${name}`, name)
     }
     if (Model.isModel(object)) {
-      return object[protocol[$$methods][name].symbol]
+      return object[protocol[name].symbol]
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[$$methods][name].symbol]
+      return object.constructor[protocol[name].symbol]
     }
   }
 
   protocol.implementationFor = function (object, name) {
     const Model = require('./model')
-    if (protocol[$$methods][name] == null) {
+    if (!protocol[$$methods].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define method ${name}`, name)
     }
     if (Model.isModel(object)) {
-      return object[protocol[$$methods][name].symbol][0]
+      return object[protocol[name].symbol][0]
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[$$methods][name].symbol][0]
+      return object.constructor[protocol[name].symbol][0]
     }
   }
 
-  protocol.getMiddleware = function (target, name, ...args) {
-    const Flow = require('./flow')
-    let fns = this.implementationsFor(target, name).map((fn) => fn.bind(target))
-    const flow = new Flow(fns, ...args)
-    return flow
-  }
-
-  protocol.getAsyncMiddleware = function (target, name, ...args) {
-    const AsyncFlow = require('./async_flow')
-    let fns = this.implementationsFor(target, name).map((fn) => fn.bind(target))
-    const flow = new AsyncFlow(fns, ...args)
-    return flow
-  }
-
-  protocol.call = function (target, name, ...args) {
-    this.implementationFor(target, name).call(target, ...args)
-  }
-
-  protocol.callFromMixin = function (target, name, mixin, ...args) {
+  protocol.implementationForMixin = function (target, mixin, name) {
     let funs = this.implementationsFor(target, name)
     for (let fn of funs) {
       let fnMixin = fn[Symbol.for('mixin')]
@@ -190,16 +212,74 @@ function generateProtocol (name) {
         continue
       } else {
         if (mixin === fnMixin || mixin === fnMixin.constructor) {
-          fn.call(target, ...args)
+          return fn
         }
       }
     }
   }
 
+  protocol.getMiddleware = function (target, name, ...args) {
+    const Flow = require('./flow')
+    const Mixin = require('./mixin')
+    let fns
+    if (target instanceof Mixin) {
+      let mixin = target
+      target = name
+      name = args[0]
+      args = args.slice(1)
+      fns = [this.implementationForMixin(target, mixin, name)]
+    } else {
+      fns = this.implementationsFor(target, name)
+    }
+    const flow = new Flow(fns.map((fn) => fn.bind(target)), ...args)
+    return flow
+  }
+
+  protocol.getAsyncMiddleware = function (target, name, ...args) {
+    const AsyncFlow = require('./async_flow')
+    const Mixin = require('./mixin')
+    let fns
+    if (target instanceof Mixin) {
+      let mixin = target
+      target = name
+      name = args[0]
+      args = args.slice(1)
+      fns = [this.implementationForMixin(target, mixin, name)]
+    } else {
+      fns = this.implementationsFor(target, name)
+    }
+    const flow = new AsyncFlow(fns.map((fn) => fn.bind(target)), ...args)
+    return flow
+  }
+
+  protocol.call = function (target, name, ...args) {
+    const Mixin = require('./mixin')
+    let impl
+    if (target instanceof Mixin) {
+      let mixin = target
+      target = name
+      name = args[0]
+      args = args.slice(1)
+      impl = this.implementationForMixin(target, mixin, name)
+    } else {
+      impl = this.implementationFor(target, name)
+    }
+    return impl.call(target, ...args)
+  }
+
   protocol.callAll = function (target, name, ...args) {
-    let impls = this.implementationsFor(target, name)
-    for (let impl of impls) {
-      impl.call(target, ...args)
+    const Mixin = require('./mixin')
+    if (target instanceof Mixin) {
+      let mixin = target
+      target = name
+      name = args[0]
+      args = args.slice(1)
+      this.implementationForMixin(target, mixin, name).call(target, ...args)
+    } else {
+      let impls = this.implementationsFor(target, name)
+      for (let impl of impls) {
+        impl.call(target, ...args)
+      }
     }
   }
 
@@ -211,9 +291,9 @@ function generateProtocol (name) {
       for (let valueName in protocol.values()) {
         let defaultValue = protocol[valueName].options.default
         if (defaultValue != null) {
-          let key = protocol[$$values][valueName].symbol
+          let key = protocol[valueName].symbol
           model[key] = defaultValue
-          protocol[$$values][valueName].hook.call(protocol, model)
+          protocol[valueName].hook.call(protocol, model)
         }
       }
       model[$$protocols][protocol.$$key] = Reflect.construct(protocol, [])

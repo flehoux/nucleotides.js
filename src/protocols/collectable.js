@@ -1,7 +1,7 @@
 const Protocol = require('../protocol')
 
 const Collectable = Protocol('Collectable')
-  .method('prepareCollection')
-  .method('prepareElement')
+  .method('prepareCollection', {mode: 'all'})
+  .method('prepareElement', {mode: 'all'})
 
 module.exports = Collectable

@@ -69,8 +69,8 @@ class Collection extends EmittingArray {
   }
 
   prepareCollection () {
-    if (Collectable.hasImplementationsFor(this.$model, 'prepareCollection')) {
-      Collectable.callAll(this.$model, 'prepareCollection', this)
+    if (this.$model.implements(Collectable.prepareCollection)) {
+      Collectable.prepareCollection(this.$model, this)
     }
     if (Identifiable.hasValueFor(this.$model, 'idKey')) {
       this.$on('add', function (elements) {
@@ -89,14 +89,14 @@ class Collection extends EmittingArray {
   }
 
   prepareElement (element) {
-    if (Collectable.hasImplementationsFor(this.$model, 'prepareElement')) {
-      Collectable.callAll(this.$model, 'prepareElement', this, element)
+    if (this.$model.implements(Collectable.prepareElement)) {
+      Collectable.prepareElement(this.$model, this, element)
     }
   }
 
   $get (id) {
     if (id != null && typeof id === 'object') {
-      id = id[Identifiable.idKeyFor(this.$model)]
+      id = id[Identifiable.idKey(this.$model)]
     }
     return this[$$map][id]
   }

@@ -10,7 +10,7 @@ const Searchable = Protocol('Searchable')
     let searchMethodName = 'by' + options.key.slice(0, 1).toUpperCase() + options.key.slice(1)
     if (options.unique === true) {
       model[searchMethodName] = function (value, params) {
-        if (Queryable.hasImplementationsFor(model, 'findOne')) {
+        if (model.implements(Queryable.findOne)) {
           let newParams = Object.assign({[options.key]: value}, params)
           return model.findOne(newParams)
         } else {
@@ -19,7 +19,7 @@ const Searchable = Protocol('Searchable')
       }
     } else {
       model[searchMethodName] = function (value, params) {
-        if (Queryable.hasImplementationsFor(model, 'findMany')) {
+        if (model.implements(Queryable.findMany)) {
           let newParams = Object.assign({[options.key]: value}, params)
           return model.findMany(newParams)
         } else {
@@ -31,9 +31,9 @@ const Searchable = Protocol('Searchable')
 
 Object.assign(Searchable, {
   hasField: function (model, fieldName) {
-    const fields = Searchable.valueFor(model, 'field')
+    const fields = Searchable.field(model)
     if (fields != null) {
-      return Searchable.valueFor(model, 'field').some(function (item) {
+      return fields.some(function (item) {
         if (item === fieldName) {
           return true
         } else if (typeof item === 'object' && item.key === fieldName) {
@@ -44,7 +44,7 @@ Object.assign(Searchable, {
     }
   },
   fieldDefinition: function (model, fieldName) {
-    const fields = Searchable.valueFor(model, 'field')
+    const fields = Searchable.field(model)
     if (fields != null) {
       const field = fields.find(function (item) {
         if (item === fieldName) {

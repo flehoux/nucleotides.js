@@ -10,7 +10,7 @@ const Identifiable = Protocol('Identifiable')
     })
     Object.defineProperty(klass, '$idKey', {
       get: function () {
-        return Identifiable.idKeyFor(this)
+        return Identifiable.idKey(this)
       }
     })
   })
@@ -42,25 +42,17 @@ Object.assign(Identifiable, {
   idFor: function (object, defaultKey = 'id') {
     const Model = require('../model')
     if (Model.isInstance(object)) {
-      return object[this.idKeyFor(object, defaultKey)]
-    }
-  },
-  idKeyFor: function (object, defaultKey = 'id') {
-    const Model = require('../model')
-    if (Model.isInstance(object)) {
-      return Identifiable.valueFor(object.constructor, 'idKey')
-    } else if (Model.isModel(object)) {
-      return Identifiable.valueFor(object, 'idKey')
+      return object[this.idKey(object, defaultKey)]
     }
   },
   urlFor: function (object, method, value) {
-    if (Identifiable.hasImplementationsFor(object, 'buildUrl')) {
-      return Identifiable.call(object, 'buildUrl', method)
+    if (object.implements(Identifiable.buildUrl)) {
+      return Identifiable.buildUrl(object, method)
     }
     const Model = require('../model')
     if (Model.isInstance(object)) {
       let components = [this.urlFor(object.constructor)]
-      if (object.$parent != null && Identifiable.hasValueFor(object.$parent, 'url')) {
+      if (object.$parent != null && object.$parent.hasValue(Identifiable.url)) {
         components.unshift(object.$parent.$url)
       }
       if (method !== 'POST') {
@@ -69,12 +61,12 @@ Object.assign(Identifiable, {
       return components.join('/')
     } else {
       let model = object
-      let components = [Identifiable.valueFor(model, 'url')]
+      let components = [Identifiable.url(model)]
       if (components[0] == null) {
         throw new Error(`Tried to get URL for model without 'Identifiable.url' set: ${model.name}`)
       }
       if (value != null) {
-        components.push(value[Identifiable.idKeyFor(model)])
+        components.push(value[Identifiable.idKey(model)])
       }
       return components.join('/')
     }
