@@ -165,6 +165,12 @@ class Collection extends EmittingArray {
         newItems.push(item)
       }
     }
+    for (let item of this) {
+      let idx = items.indexOf(item)
+      if (idx === -1) {
+        this.splice(idx, 1)
+      }
+    }
     this.push(...newItems)
     this.sort(function (a, b) {
       return items.indexOf(a) - items.indexOf(b)
