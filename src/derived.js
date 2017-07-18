@@ -111,7 +111,7 @@ class CachedDerivedValue extends DerivedValue {
           }
         }
       })
-    } else {
+    } else if (this.options.source == null || this.options.source === 'all') {
       klass.$on('change', function (object) {
         if (derived.options.eager === true) {
           derived.cache(object)
@@ -132,6 +132,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
   clearCache (object) {
     let loaded = object.hasOwnProperty(this.$$cache)
     delete object[this.$$cache]
+    delete object[this.$$promise]
     if (loaded) {
       this.ensure(object)
     }
@@ -158,6 +159,10 @@ class AsyncDerivedValue extends CachedDerivedValue {
           }
         }
       })
+    } else if (this.options.source === 'all') {
+      klass.$on('change', function (object, difference) {
+        derived.clearCache(object)
+      })
     }
   }
 
@@ -174,6 +179,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
         object.constructor.$emit('resolved', object, derived.name, value)
         return object
       })
+      return object[derived.$$promise]
     } else {
       throw DerivedDefinitionException('unacceptable', 'Getter function did not return a Promise instance', result)
     }

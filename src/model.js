@@ -214,7 +214,7 @@ function generateModel (name) {
       return this
     },
 
-    $ensure: function (names) {
+    $ensure: function (...names) {
       const promises = []
       for (name of names) {
         const derived = klass[$$derived][name]

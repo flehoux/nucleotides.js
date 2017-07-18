@@ -22,6 +22,9 @@ class AsyncFlow extends Flow {
       throw reason
     })
     this.promise[$$flow] = this
+    Object.defineProperty(this.promise, '$flow', {
+      get: function () { return this[$$flow] }
+    })
   }
 
   static get successCode () {
