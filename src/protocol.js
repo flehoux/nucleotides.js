@@ -45,7 +45,7 @@ function generateProtocol (name) {
 
   const identity = () => {}
 
-  protocol.requires = function (otherProtocol) {
+  protocol.require = function (otherProtocol) {
     protocol[$$requirements].add(otherProtocol)
     return protocol
   }
@@ -288,7 +288,7 @@ function generateProtocol (name) {
       for (let requirement of protocol[$$requirements]) {
         requirement.augmentModel(model)
       }
-      for (let valueName in protocol.values()) {
+      for (let valueName of protocol.values()) {
         let defaultValue = protocol[valueName].options.default
         if (defaultValue != null) {
           let key = protocol[valueName].symbol

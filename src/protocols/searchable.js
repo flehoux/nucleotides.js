@@ -2,7 +2,7 @@ const Protocol = require('../protocol')
 const Queryable = require('./queryable')
 
 const Searchable = Protocol('Searchable')
-  .requires(Queryable)
+  .require(Queryable)
   .value('field', {accumulate: true}, function (model, options) {
     if (typeof options === 'string') {
       options = {key: options, unique: false}

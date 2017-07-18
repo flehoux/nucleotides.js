@@ -1,6 +1,7 @@
 const makeEmitter = require('./emitter')
 
 let EmittingArray = function () {}
+const $$isAdding = Symbol('isAdding')
 
 Object.assign(EmittingArray, {
   create: function (...args) {
@@ -11,7 +12,7 @@ Object.assign(EmittingArray, {
   },
   proxyHandler: {
     deleteProperty: function (target, property) {
-      if (target.$$isAdding) {
+      if (target[$$isAdding]) {
         delete target[property]
         return true
       }
@@ -25,7 +26,7 @@ Object.assign(EmittingArray, {
       return true
     },
     set: function (target, property, value) {
-      if (target.$$isAdding) {
+      if (target[$$isAdding]) {
         target[property] = value
         return true
       }
@@ -75,9 +76,9 @@ Object.assign(EmittingArray.prototype, {
   },
 
   preventTrigger: function (cb) {
-    this.$$isAdding = true
+    this[$$isAdding] = true
     let res = cb()
-    this.$$isAdding = false
+    this[$$isAdding] = false
     return res
   },
 

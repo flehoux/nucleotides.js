@@ -17,8 +17,9 @@ class Collection extends EmittingArray {
     let newArray = Reflect.construct(this, [])
     newArray.$on('adding', newArray.transformElements)
     newArray.$model = model
-    newArray.push(...args)
-    return new Proxy(newArray, this.proxyHandler)
+    let result = new Proxy(newArray, this.proxyHandler)
+    result.push(...args)
+    return result
   }
 
   constructor () {
@@ -72,7 +73,7 @@ class Collection extends EmittingArray {
     if (this.$model.implements(Collectable.prepareCollection)) {
       Collectable.prepareCollection(this.$model, this)
     }
-    if (Identifiable.hasValueFor(this.$model, 'idKey')) {
+    if (this.$model.hasValue(Identifiable.idKey)) {
       this.$on('add', function (elements) {
         for (let element of elements) {
           let key = Identifiable.idFor(element)

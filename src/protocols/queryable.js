@@ -135,7 +135,7 @@ class Failure {
 }
 
 const Queryable = Protocol('Queryable')
-  .requires(Identifiable)
+  .require(Identifiable)
   .method('findOne', {mode: 'async_flow'}, function (model) {
     model.findOne = doFindOne
   })
