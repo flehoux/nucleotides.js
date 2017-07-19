@@ -176,11 +176,9 @@ function generateMixin (name) {
           options = {}
         }
       }
-
-      let derived = DerivedValue.create(name, options, function (...args) {
+      model.derive(name, options, function (...args) {
         return getter.apply(this, [mixin].concat(args))
       })
-      derived.augmentModel(model)
     }
   }
 
