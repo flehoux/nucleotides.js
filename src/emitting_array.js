@@ -11,12 +11,8 @@ Object.assign(EmittingArray, {
   },
   proxyHandler: {
     deleteProperty: function (target, property) {
-      if (target[$$isAdding]) {
-        delete target[property]
-        return true
-      }
       const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
-      if (isInapplicableType || parseFloat(property).toString() !== property) {
+      if (isInapplicableType || parseFloat(property).toString() !== property || target[$$isAdding]) {
         delete target[property]
         return true
       }
@@ -25,12 +21,8 @@ Object.assign(EmittingArray, {
       return true
     },
     set: function (target, property, value) {
-      if (target[$$isAdding]) {
-        target[property] = value
-        return true
-      }
       const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
-      if (isInapplicableType || parseFloat(property).toString() !== property) {
+      if (isInapplicableType || parseFloat(property).toString() !== property || target[$$isAdding]) {
         target[property] = value
         return true
       }
