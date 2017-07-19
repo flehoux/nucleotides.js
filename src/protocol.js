@@ -355,8 +355,9 @@ Protocol.augmentModelWithImplementation = function (model, item, priority, fn) {
   const {protocol} = item
   if (typeof priority === 'function') {
     fn = priority
-    fn[$$priority] = 500
+    priority = null
   }
+  fn[$$priority] = priority || 500
   protocol.augmentModelWithImplementation(model, item, fn)
 }
 
