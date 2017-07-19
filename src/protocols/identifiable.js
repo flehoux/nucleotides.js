@@ -41,10 +41,12 @@ Object.assign(Identifiable, {
     }
   },
   urlFor: function (object, method, value) {
-    if (object.implements(Identifiable.buildUrl)) {
+    const Model = require('../model')
+    if (Model.isModel(object) && object.implements(Identifiable.buildUrl)) {
+      return Identifiable.buildUrl(object, method)
+    } else if (Model.isInstance(object) && object.constructor.implements(Identifiable.buildUrl)) {
       return Identifiable.buildUrl(object, method)
     }
-    const Model = require('../model')
     if (Model.isInstance(object)) {
       let components = [this.urlFor(object.constructor)]
       if (object.$parentUrl != null) {
