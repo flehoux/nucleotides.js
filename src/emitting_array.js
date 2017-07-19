@@ -6,9 +6,8 @@ const $$isAdding = Symbol('isAdding')
 Object.assign(EmittingArray, {
   create: function (...args) {
     let newArray = new EmittingArray()
-    let proxied = new Proxy(newArray, this.proxyHandler)
-    proxied.push(...args)
-    return proxied
+    newArray.push(...args)
+    return new Proxy(newArray, this.proxyHandler)
   },
   proxyHandler: {
     deleteProperty: function (target, property) {

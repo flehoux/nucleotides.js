@@ -17,9 +17,8 @@ class Collection extends EmittingArray {
     let newArray = Reflect.construct(this, [])
     newArray.$on('adding', newArray.transformElements)
     newArray.$model = model
-    let result = new Proxy(newArray, this.proxyHandler)
-    result.push(...args)
-    return result
+    newArray.push(...args)
+    return new Proxy(newArray, this.proxyHandler)
   }
 
   constructor () {
