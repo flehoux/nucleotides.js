@@ -145,4 +145,10 @@ Object.assign(EmittingArray.prototype, {
 
 makeEmitter(EmittingArray.prototype)
 
+Object.defineProperty(EmittingArray.prototype, '$clean', {
+  get: function () {
+    return Array.from(this)
+  }
+})
+
 module.exports = EmittingArray

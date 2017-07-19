@@ -201,10 +201,10 @@ function generateModel (name) {
 
   klass.derive('$clean', {cache: true}, function () {
     const data = {}
-    const Collection = require('./collection')
+    const EmittingArray = require('./emitting_array')
     for (const key in this.$data) {
       const value = this.$data[key]
-      if (Model.isInstance(value) || value instanceof Collection) {
+      if (Model.isInstance(value) || value instanceof EmittingArray) {
         data[key] = value.$clean
       } else {
         data[key] = value
