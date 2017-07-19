@@ -13,6 +13,9 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     return Object.keys(this[$$difference]).length === 0
   })
   .derive('$difference', function () {
+    if (this[$$difference] == null) {
+      this[$$difference] = {}
+    }
     return this[$$difference]
   })
 
@@ -43,7 +46,7 @@ DifferenceMixin.$on('use', function (mixin, model) {
   model.$on('new', (object) => object.$setPristine())
   model.$on('saved', (object) => object.$setPristine())
   model.$on('change', function (object, diff) {
-    mixin.mergeDifference(this, object, object[$$difference], diff)
+    mixin.mergeDifference(this, object, object.$difference, diff)
   })
 })
 
