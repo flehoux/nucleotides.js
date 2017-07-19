@@ -10,6 +10,10 @@ class CollectablePromise {
     return this.promise.$result
   }
 
+  isArray (items) {
+    return (items instanceof Collection) || Array.isArray(items)
+  }
+
   createCollection (items) {
     return Collection.create(this.model, ...items)
   }
@@ -45,7 +49,7 @@ class CollectablePromise {
 
   filter (fun) {
     return this.wrap(this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -57,7 +61,7 @@ class CollectablePromise {
 
   map (fun, cast = true) {
     let promise = this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -73,7 +77,7 @@ class CollectablePromise {
 
   reduce (fun, initialValue, cast = false) {
     let promise = this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -89,7 +93,7 @@ class CollectablePromise {
 
   reduceRight (fun, initialValue, cast = false) {
     let promise = this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -105,7 +109,7 @@ class CollectablePromise {
 
   entries () {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -117,7 +121,7 @@ class CollectablePromise {
 
   some (fun) {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -129,7 +133,7 @@ class CollectablePromise {
 
   every (fun) {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -141,7 +145,7 @@ class CollectablePromise {
 
   find (fun) {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -153,7 +157,7 @@ class CollectablePromise {
 
   findIndex (fun) {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
@@ -165,7 +169,7 @@ class CollectablePromise {
 
   forEach (fun) {
     return this.promise.then(function (items) {
-      if (Array.isArray(items)) {
+      if (this.isArray(items)) {
         if (!(items instanceof Collection)) {
           items = this.createCollection(items)
         }
