@@ -22,7 +22,7 @@ function ensureInstance (response, model) {
     value = Storable.decode(model, value)
   }
   if (Model.isInstance(value)) {
-    value.$isNew = false
+    value[$$isNew] = false
   }
   if (typeof value === 'object') {
     value.$response = response
@@ -44,8 +44,13 @@ function ensureListOfInstance (response, model) {
     values = []
   }
   values = values.map((value) => {
-    if (Model.isModel(model) && !(value instanceof model)) {
-      return Storable.decode(model, value)
+    if (Model.isModel(model)) {
+      let object = value
+      if (!(object instanceof model)) {
+        object = Storable.decode(model, object)
+      }
+      object[$$isNew] = false
+      return object
     } else {
       return value
     }
