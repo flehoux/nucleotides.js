@@ -14,7 +14,7 @@ const $$implementations = Symbol('implementations')
 const $$models = Symbol('models')
 const $$requirements = Symbol('requirements')
 
-const DerivedProperty = require('./derived')
+const DerivedValue = require('./derived')
 const factory = require('./create')
 const makeEmitter = require('./emitter')
 
@@ -177,7 +177,7 @@ function generateMixin (name) {
         }
       }
 
-      let derived = new DerivedProperty(name, options, function (...args) {
+      let derived = DerivedValue.create(name, options, function (...args) {
         return getter.apply(this, [mixin].concat(args))
       })
       derived.augmentModel(model)
