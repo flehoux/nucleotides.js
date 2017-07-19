@@ -3,7 +3,18 @@ const Collection = require('./collection')
 class CollectablePromise {
   constructor (promise, model) {
     this.model = model
-    this.promise = promise
+    this.promise = promise.then((items) => {
+      if (items instanceof Collection && items.$model != null) {
+        return items
+      } else {
+        return this.createCollection(items)
+      }
+    })
+    Object.defineProperty(this.promise, '$result', {
+      get: function () {
+        return promise.$result
+      }
+    })
   }
 
   get $result () {
