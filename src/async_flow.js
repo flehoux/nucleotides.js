@@ -41,8 +41,10 @@ class AsyncFlow extends Flow {
       if (result instanceof Promise) {
         this[$$bind](result)
       }
-      return this.promise
+    } else {
+      this[$$resolver]()
     }
+    return this.promise
   }
 
   continue (...args) {

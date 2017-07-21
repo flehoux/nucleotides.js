@@ -14,7 +14,6 @@ const $$implementations = Symbol('implementations')
 const $$models = Symbol('models')
 const $$requirements = Symbol('requirements')
 
-const DerivedValue = require('./derived')
 const factory = require('./create')
 const makeEmitter = require('./emitter')
 
