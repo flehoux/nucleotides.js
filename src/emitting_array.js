@@ -1,39 +1,49 @@
 const makeEmitter = require('./emitter')
 
-let EmittingArray = function () {}
 const $$isAdding = Symbol('isAdding')
+const $$array = Symbol('array')
+const $$maxLength = Symbol('maxLength')
+
+let EmittingArray = function () {
+  this[$$array] = []
+  this[$$maxLength] = 0
+}
 
 Object.assign(EmittingArray, {
   create: function (...args) {
     let newArray = new EmittingArray()
+    newArray.$on('add', () => { newArray.length = newArray.$safe.length })
+    newArray.$on('remove', () => { newArray.length = newArray.$safe.length })
     newArray.push(...args)
     return new Proxy(newArray, this.proxyHandler)
   },
   proxyHandler: {
     deleteProperty: function (target, property) {
       const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
-      if (isInapplicableType || parseFloat(property).toString() !== property || target[$$isAdding]) {
+      let array
+      if (isInapplicableType || parseFloat(property).toString() !== property) {
         delete target[property]
         return true
       }
-      delete target[property]
+      array = target[$$array]
+      delete array[property]
       target.$emit('remove', [target[property]])
-      return true
+      return false
     },
     set: function (target, property, value) {
       const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
-      if (isInapplicableType || parseFloat(property).toString() !== property || target[$$isAdding]) {
+      if (isInapplicableType || parseFloat(property).toString() !== property) {
         target[property] = value
         return true
       }
-      let oldValue = target[property]
-      if (target.indexOf(value) >= 0) {
-        target[property] = value
+      let oldValue = target[$$array][property]
+      if (target[$$array].indexOf(value) >= 0) {
+        target[$$array][property] = value
         return true
       }
       let [newValue] = target.prepareElements([value])
       if (newValue !== oldValue) {
-        target[property] = newValue
+        target[$$array][property] = newValue
         if (oldValue != null) {
           target.$emit('remove', [oldValue])
         }
@@ -42,6 +52,14 @@ Object.assign(EmittingArray, {
         }
       }
       return true
+    },
+    get: function (target, property) {
+      const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
+      if (isInapplicableType || parseFloat(property).toString() !== property) {
+        return target[property]
+      } else {
+        return target[$$array][property]
+      }
     }
   }
 })
@@ -55,6 +73,10 @@ Object.defineProperty(EmittingArray, Symbol.species, {
 EmittingArray.prototype = Object.create(Array.prototype)
 
 Object.assign(EmittingArray.prototype, {
+  [Symbol.iterator]: function () {
+    return this[$$array][Symbol.iterator]()
+  },
+
   prepareElements: function (elements) {
     if (elements.length === 0) return elements
     let event = {elements, reason: null, canceled: false}
@@ -66,6 +88,23 @@ Object.assign(EmittingArray.prototype, {
     }
   },
 
+  sort: function (...args) {
+    this[$$array].sort(...args)
+    return this
+  },
+
+  indexOf: function (item) {
+    return this[$$array].indexOf(item)
+  },
+
+  lastIndexOf: function (item) {
+    return this[$$array].lastIndexOf(item)
+  },
+
+  join: function (delimiter) {
+    return this[$$array].join(delimiter)
+  },
+
   preventTrigger: function (cb) {
     this[$$isAdding] = true
     let res = cb()
@@ -73,16 +112,20 @@ Object.assign(EmittingArray.prototype, {
     return res
   },
 
+  slice: function (n) {
+    return EmittingArray.create(...this[$$array].slice(0))
+  },
+
   push: function (...args) {
     let elements = this.prepareElements(args)
-    let result = this.preventTrigger(() => Array.prototype.push.call(this, ...elements))
+    let result = this[$$array].push(...elements)
     this.$emit('add', elements)
     return result
   },
 
   unshift: function (...args) {
     let elements = this.prepareElements(args)
-    let result = this.preventTrigger(() => Array.prototype.unshift.call(this, ...elements))
+    let result = this[$$array].unshift(...elements)
     this.$emit('add', elements)
     return result
   },
@@ -92,12 +135,12 @@ Object.assign(EmittingArray.prototype, {
     newElements = this.prepareElements(newElements)
     if (deleteCount !== 0) {
       if (deleteCount == null) {
-        removed = this.slice(start)
+        removed = this[$$array].slice(start)
       } else {
-        removed = this.slice(start, start + deleteCount)
+        removed = this[$$array].slice(start, start + deleteCount)
       }
     }
-    let result = this.preventTrigger(() => Array.prototype.splice.call(this, start, deleteCount, ...newElements))
+    let result = this[$$array].splice(start, deleteCount, ...newElements)
     if (removed.length > 0) {
       this.$emit('remove', removed)
     }
@@ -108,7 +151,7 @@ Object.assign(EmittingArray.prototype, {
   },
 
   shift: function () {
-    var result = this.preventTrigger(() => Array.prototype.shift.call(this))
+    var result = this[$$array].shift()
     if (result != null) {
       this.$emit('remove', [result])
     }
@@ -116,7 +159,7 @@ Object.assign(EmittingArray.prototype, {
   },
 
   pop: function () {
-    var result = this.preventTrigger(() => Array.prototype.pop.call(this))
+    var result = this[$$array].pop()
     if (result != null) {
       this.$emit('remove', [result])
     }
@@ -126,7 +169,7 @@ Object.assign(EmittingArray.prototype, {
   fill: function (value, start, end) {
     let newElements = this.prepareElements([value])
     let removed = this.slice(start, end)
-    let result = this.preventTrigger(() => Array.prototype.fill.call(this, newElements[0], start, end))
+    let result = this[$$array].fill(newElements[0], start, end)
     if (removed.length > 0) {
       this.$emit('remove', removed)
       this.$emit('add', newElements)
@@ -145,9 +188,52 @@ Object.assign(EmittingArray.prototype, {
 
 makeEmitter(EmittingArray.prototype)
 
-Object.defineProperty(EmittingArray.prototype, '$clean', {
-  get: function () {
-    return Array.from(this)
+Object.defineProperties(EmittingArray.prototype, {
+  $clean: {
+    get: function () {
+      return Array.from(this)
+    }
+  },
+  $safe: {
+    get: function () {
+      return this[$$array]
+    }
+  },
+  length: {
+    get: function () {
+      return this[$$array].length
+    },
+    set: function (newLength) {
+      if (newLength > this[$$maxLength]) {
+        let i = this[$$maxLength]
+        while (i < newLength) {
+          Object.defineProperty(this, i.toString(), {
+            get: function () {
+              return this[$$array][i]
+            },
+            set: function (value) {
+              let oldValue = this[$$array][i]
+              if (this[$$array].indexOf(value) >= 0) {
+                this[$$array][i] = value
+                return true
+              }
+              let [newValue] = this.prepareElements([value])
+              if (newValue !== oldValue) {
+                this[$$array][i] = newValue
+                if (oldValue != null) {
+                  this.$emit('remove', [oldValue])
+                }
+                if (newValue != null) {
+                  this.$emit('add', [newValue])
+                }
+              }
+            }
+          })
+          i = i + 1
+        }
+        this[$$maxLength] = newLength
+      }
+    }
   }
 })
 

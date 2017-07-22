@@ -28,9 +28,11 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
     let attribute = model.attribute(key)
     if (attribute.collection) {
       if (attribute.isModel) {
-        previousDifference[key] = object[key].map((subobject) => subobject.$clean)
+        previousDifference[key] = object[key].map((subobject) => {
+          return subobject.$clean
+        })
       } else {
-        previousDifference[key] = object[key].slice(0)
+        previousDifference[key] = object[key].slice(0).$safe
       }
     } else {
       if (attribute.isModel) {

@@ -13,9 +13,15 @@ class Collection extends EmittingArray {
     return Collection
   }
 
+  [Symbol.iterator] () {
+    return this.$safe[Symbol.iterator]()
+  }
+
   static create (model, ...args) {
     let newArray = Reflect.construct(this, [])
     newArray.$on('adding', newArray.transformElements)
+    newArray.$on('add', () => { newArray.length = newArray.$safe.length })
+    newArray.$on('remove', () => { newArray.length = newArray.$safe.length })
     newArray.$model = model
     newArray.push(...args)
     return new Proxy(newArray, this.proxyHandler)
@@ -62,7 +68,7 @@ class Collection extends EmittingArray {
 
   get $clean () {
     let results = []
-    for (let item of this) {
+    for (let item of this.$safe) {
       results.push(item.$clean)
     }
     return results
@@ -108,10 +114,14 @@ class Collection extends EmittingArray {
     return this[$$map][id] != null
   }
 
+  slice (n) {
+    return Collection.create(this.$model, ...this.$safe.slice(0))
+  }
+
   $replace (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.indexOf(existing)
+      let idx = this.$safe.indexOf(existing)
       this.splice(idx, 1, object)
     }
   }
@@ -119,7 +129,7 @@ class Collection extends EmittingArray {
   $put (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.indexOf(existing)
+      let idx = this.$safe.indexOf(existing)
       this.splice(idx, 1, object)
     } else {
       this.push(object)
@@ -129,7 +139,7 @@ class Collection extends EmittingArray {
   $remove (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.indexOf(existing)
+      let idx = this.$safe.indexOf(existing)
       this.splice(idx, 1)
     }
   }
@@ -147,7 +157,7 @@ class Collection extends EmittingArray {
   }
 
   $updateAll (items) {
-    let currentItems = this.slice(0)
+    let currentItems = this.$safe.slice(0)
     let newItems = []
     for (let item of items) {
       let currentItem = this.$get(item)
