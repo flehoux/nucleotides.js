@@ -3,6 +3,7 @@
 const $$model = Symbol('Model')
 const $$map = Symbol('map')
 
+const makeEmitter = require('./emitter')
 const EmittingArray = require('./emitting_array')
 const Model = require('./model')
 const Collectable = require('./protocols/collectable')
@@ -18,13 +19,14 @@ class Collection extends EmittingArray {
   }
 
   static create (model, ...args) {
-    let newArray = Reflect.construct(this, [])
-    newArray.$on('adding', newArray.transformElements)
-    newArray.$on('add', () => { newArray.length = newArray.$safe.length })
-    newArray.$on('remove', () => { newArray.length = newArray.$safe.length })
-    newArray.$model = model
-    newArray.push(...args)
-    return new Proxy(newArray, this.proxyHandler)
+    let newCollection = Reflect.construct(this, [])
+    makeEmitter(newCollection)
+    newCollection.$on('adding', newCollection.transformElements)
+    newCollection.$on('add', () => { newCollection.length = newCollection.$safe.length })
+    newCollection.$on('remove', () => { newCollection.length = newCollection.$safe.length })
+    newCollection.$model = model
+    newCollection.push(...args)
+    return new Proxy(newCollection, this.proxyHandler)
   }
 
   constructor () {

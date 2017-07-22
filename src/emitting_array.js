@@ -12,6 +12,7 @@ let EmittingArray = function () {
 Object.assign(EmittingArray, {
   create: function (...args) {
     let newArray = new EmittingArray()
+    makeEmitter(newArray)
     newArray.$on('add', () => { newArray.length = newArray.$safe.length })
     newArray.$on('remove', () => { newArray.length = newArray.$safe.length })
     newArray.push(...args)
@@ -185,8 +186,6 @@ Object.assign(EmittingArray.prototype, {
     this.splice(0, this.length, ...items)
   }
 })
-
-makeEmitter(EmittingArray.prototype)
 
 Object.defineProperties(EmittingArray.prototype, {
   $clean: {

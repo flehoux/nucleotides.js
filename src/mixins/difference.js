@@ -32,7 +32,7 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
           return subobject.$clean
         })
       } else {
-        previousDifference[key] = object[key].slice(0).$safe
+        previousDifference[key] = object[key].$safe.slice(0)
       }
     } else {
       if (attribute.isModel) {
