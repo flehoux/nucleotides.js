@@ -26,12 +26,20 @@ class Attribute {
     if (type === String) {
       return (value) => value.toString()
     } else if (type === Number) {
-      return (value) => parseFloat(value)
+      return (value) => {
+        if (typeof value === 'number') {
+          return value
+        } else if (typeof value === 'string') {
+          return parseFloat(value)
+        }
+      }
     } else if (type === Boolean) {
       return (value) => !!value
     } else if (type === Date) {
       return function (value) {
-        if (typeof value === 'string' || typeof value === 'number') {
+        if (value instanceof Date) {
+          return value
+        } else if (typeof value === 'string' || typeof value === 'number') {
           return new Date(value)
         } else if (typeof value === 'object') {
           const { year, month, date, hours, minutes, seconds, milliseconds } = value
