@@ -58,6 +58,13 @@ class CollectablePromise {
     return promise
   }
 
+  ensure (...names) {
+    return this.wrap(this.promise.then((items) => {
+      let promises = items.map((item) => item.$ensure(...names))
+      return Promise.all(promises)
+    }))
+  }
+
   filter (fun) {
     return this.wrap(this.promise.then((items) => {
       if (this.isArray(items)) {
