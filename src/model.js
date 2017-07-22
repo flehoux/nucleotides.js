@@ -90,7 +90,18 @@ function generateModel (name) {
   }
 
   klass.createCollection = function (...elements) {
-    return require('./collection').create(this, ...elements)
+    if (elements.length === 1 && typeof elements[0] === 'function') {
+      const CollectablePromise = require('./collectable_promise')
+      let [getter] = elements
+      let result = getter()
+      if (result != null && typeof result.then === 'function') {
+        return new CollectablePromise(result, this)
+      } else if (typeof result.length === 'number' && result[0] && typeof result[0].then === 'function') {
+        return new CollectablePromise(Promise.all(result), this)
+      }
+    } else {
+      return require('./collection').create(this, ...elements)
+    }
   }
 
   klass.attribute = function (name, type, options) {
