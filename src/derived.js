@@ -172,7 +172,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
       return object[derived.$$promise]
     }
     let result = this.getter.call(object)
-    if (result instanceof Promise) {
+    if (typeof result.then === 'function') {
       object[derived.$$promise] = result.then(function (value) {
         object[derived.$$cache] = value
         object.$emit('resolved', derived.name, value)
@@ -181,7 +181,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
       })
       return object[derived.$$promise]
     } else {
-      throw DerivedDefinitionException('unacceptable', 'Getter function did not return a Promise instance', result)
+      throw new DerivedDefinitionException('unacceptable', 'Getter function did not return a Promise instance', result)
     }
   }
 }
