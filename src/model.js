@@ -98,6 +98,8 @@ function generateModel (name) {
         return new CollectablePromise(result, this)
       } else if (typeof result.length === 'number' && result[0] && typeof result[0].then === 'function') {
         return new CollectablePromise(Promise.all(result), this)
+      } else {
+        return new CollectablePromise(Promise.resolve(result), this)
       }
     } else {
       return require('./collection').create(this, ...elements)
