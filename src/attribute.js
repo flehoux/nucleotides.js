@@ -153,17 +153,18 @@ class Attribute {
   augmentModel (klass) {
     const attribute = this
     const Searchable = require('./protocols/searchable')
-    Object.defineProperty(klass.prototype, this.name, {
-      set: function (value) {
-        if (attribute.updateInTarget(this, value) && !this.collection) {
-          this.$didChange({[attribute.name]: this[attribute.name]})
-        }
-      },
-      get: function () {
-        return this.$data[attribute.name]
-      }
-    })
     klass.$on('creating', function (object) {
+      Object.defineProperty(object, attribute.name, {
+        enumerable: true,
+        set: function (value) {
+          if (attribute.updateInTarget(this, value) && !this.collection) {
+            this.$didChange({[attribute.name]: this[attribute.name]})
+          }
+        },
+        get: function () {
+          return this.$data[attribute.name]
+        }
+      })
       object.$setTracker(attribute.name, Symbol(`attributes:${attribute.name}`))
       attribute.initializeInTarget(object)
     })
