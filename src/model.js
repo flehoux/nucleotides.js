@@ -191,6 +191,13 @@ function generateModel (name) {
     return klass
   }
 
+  klass.add = function (protocolValue, value) {
+    if (protocolValue.options.accumulate === true) {
+      Protocol.augmentModelWithValue(klass, protocolValue, value)
+    }
+    return klass
+  }
+
   klass.implement = function (protocolImpl, priority, fun) {
     Protocol.augmentModelWithImplementation(klass, protocolImpl, priority, fun)
     return klass
