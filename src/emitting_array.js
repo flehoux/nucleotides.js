@@ -29,7 +29,7 @@ Object.assign(EmittingArray, {
       array = target[$$array]
       delete array[property]
       target.$emit('remove', [target[property]])
-      return false
+      return true
     },
     set: function (target, property, value) {
       const isInapplicableType = (typeof property !== 'string' && typeof property !== 'number')
@@ -207,6 +207,7 @@ Object.defineProperties(EmittingArray.prototype, {
         let i = this[$$maxLength]
         while (i < newLength) {
           Object.defineProperty(this, i.toString(), {
+            configurable: true,
             get: function () {
               return this[$$array][i]
             },
