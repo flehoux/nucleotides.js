@@ -16,7 +16,7 @@ function ensureInstance (response, model) {
     throw new Protocol.Error('AsyncFlow did not return a Queryable.Success object')
   }
   if (value == null) {
-    return
+    throw new Failure('Object not found', 404, response)
   }
   if (Model.isModel(model) && !(value instanceof model)) {
     value = Storable.decode(model, value)
@@ -64,7 +64,12 @@ function doFindOne (...args) {
   let promise = Queryable.findOne(this, ...args)
   let flow = promise.$flow
   if (flow.successful) {
-    let result = ensureInstance(flow.resolved, this)
+    let result
+    try {
+      result = ensureInstance(flow.resolved, this)
+    } catch (err) {
+      return Promise.reject(err)
+    }
     promise = Promise.resolve(result)
     promise.$result = result
     return promise
@@ -118,8 +123,16 @@ function doSave (...args) {
     this.$emit('saved')
     this.constructor.$emit('saved', this)
 
-    let res = ensureInstance.call(this.constructor, resp)
-    if (res != null) {
+    let res
+    if (resp != null) {
+      try {
+        res = ensureInstance.call(this.constructor, resp)
+      } catch (err) {
+        if (err instanceof Failure && err.code === 404) {
+          return this
+        }
+        throw err
+      }
       this.$response = res.$response
     }
     return this

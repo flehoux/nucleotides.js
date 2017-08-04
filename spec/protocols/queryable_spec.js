@@ -1,4 +1,4 @@
-/* global describe it expect jasmine */
+/* global describe it expect jasmine fail */
 
 describe('A model defined with a storage implementation', function () {
   const {Model, Protocol} = require('../..')
@@ -48,6 +48,16 @@ describe('A model defined with a storage implementation', function () {
       expect(person).toEqual(jasmine.any(Person))
       expect(person.$isNew).toBe(false)
       delete storage['2']
+      done()
+    })
+  })
+
+  it('should throw an error if no object can be found with Person.findOne()', function (done) {
+    Person.findOne('asldkmasldkm').then(function () {
+      fail('Should not succeed')
+    }, function (err) {
+      expect(err).toEqual(jasmine.any(Protocol.Queryable.Failure))
+      expect(err.code).toBe(404)
       done()
     })
   })
