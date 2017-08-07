@@ -1,5 +1,41 @@
 /* global describe it expect jasmine */
 
+describe('A Model modified using a mixin that defines attributes', function () {
+  const { Model, Mixin } = require('..')
+
+  var LogAttributesMixin = Mixin('LogAttributesMixin')
+      .attributes({
+        updated_by: String
+      })
+
+  var Person = Model('Person')
+      .attributes({
+        firstName: String,
+        lastName: String
+      })
+      .use(new LogAttributesMixin())
+
+  it('should be able to configure the augmented attributes', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    expect(person.updated_by).toEqual('Paul')
+  })
+
+  it('should keep the augmented attributes when returning it\'s clean version', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    expect(person.$clean.updated_by).toEqual('Paul')
+  })
+})
+
 describe('A Model modified using a mixin that defines derived properties', function () {
   const { Model, Mixin } = require('..')
   const mixinSpy = jasmine.createSpy()
