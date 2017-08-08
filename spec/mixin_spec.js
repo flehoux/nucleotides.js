@@ -8,12 +8,21 @@ describe('A Model modified using a mixin that defines attributes', function () {
         updated_by: String
       })
 
+  var BooleanAttributesMixin = Mixin('BooleanAttributesMixin')
+      .attributes({
+        enabled: {
+          type: Boolean,
+          initial: false
+        }
+      })
+
   var Person = Model('Person')
       .attributes({
         firstName: String,
         lastName: String
       })
       .use(new LogAttributesMixin())
+      .use(new BooleanAttributesMixin())
 
   it('should be able to configure the augmented attributes', function () {
     var person = new Person({
@@ -33,6 +42,28 @@ describe('A Model modified using a mixin that defines attributes', function () {
     })
 
     expect(person.$clean.updated_by).toEqual('Paul')
+  })
+
+  it('should not modify the attributes definition', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    var Robot = Model('Robot')
+      .attributes({
+        name: String
+      })
+      .use(new BooleanAttributesMixin())
+
+    var robot = new Robot({
+      name: 'Robotron',
+      enabled: true
+    })
+
+    expect(person.$clean.enabled).toEqual(false)
+    expect(robot.$clean.enabled).toEqual(true)
   })
 })
 
