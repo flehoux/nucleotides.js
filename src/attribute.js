@@ -79,7 +79,6 @@ class Attribute {
   static shorthand (name, options) {
     if (options.hasOwnProperty('type')) {
       let type = options.type
-      delete options.type
       return new Attribute(name, type, options)
     } else {
       return new Attribute(name, options)

@@ -2,6 +2,7 @@
 
 const $$constructor = Symbol('construct')
 
+const $$attributes = Symbol('attributes')
 const $$derivedProperties = Symbol('derived')
 const $$staticProperties = Symbol('statics')
 const $$findOne = Symbol('find_one')
@@ -42,6 +43,7 @@ function generateMixin (name) {
     }
   }
 
+  klass[$$attributes] = {}
   klass[$$implementations] = []
   klass[$$derivedProperties] = []
   klass[$$staticProperties] = []
@@ -56,6 +58,15 @@ function generateMixin (name) {
   klass.construct = function (fn) {
     if (fn instanceof Function) {
       klass[$$constructor] = fn
+    }
+    return klass
+  }
+
+  klass.attributes = function (attributes) {
+    if (typeof attributes === 'object') {
+      for (const name of Object.keys(attributes)) {
+        klass[$$attributes][name] = attributes[name]
+      }
     }
     return klass
   }
@@ -119,6 +130,7 @@ function generateMixin (name) {
 
   klass.prototype.augmentModel = function (model) {
     if (!this[$$models].has(model)) {
+      augmentWithAttributes(this, model)
       augmentWithDerivedProperties(this, model)
       augmentWithMethods(this, model)
       augmentWithClassMethods(this, model)
@@ -135,6 +147,12 @@ function generateMixin (name) {
       return this[$$models]
     }
   })
+
+  function augmentWithAttributes (mixin, model) {
+    if (Object.keys(klass[$$attributes]).length > 0) {
+      model.attributes(klass[$$attributes])
+    }
+  }
 
   function augmentWithProtocolImplementations (mixin, model) {
     for (let impl of klass[$$implementations]) {

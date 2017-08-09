@@ -1,5 +1,72 @@
 /* global describe it expect jasmine */
 
+describe('A Model modified using a mixin that defines attributes', function () {
+  const { Model, Mixin } = require('..')
+
+  var LogAttributesMixin = Mixin('LogAttributesMixin')
+      .attributes({
+        updated_by: String
+      })
+
+  var BooleanAttributesMixin = Mixin('BooleanAttributesMixin')
+      .attributes({
+        enabled: {
+          type: Boolean,
+          initial: false
+        }
+      })
+
+  var Person = Model('Person')
+      .attributes({
+        firstName: String,
+        lastName: String
+      })
+      .use(new LogAttributesMixin())
+      .use(new BooleanAttributesMixin())
+
+  it('should be able to configure the augmented attributes', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    expect(person.updated_by).toEqual('Paul')
+  })
+
+  it('should keep the augmented attributes when returning it\'s clean version', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    expect(person.$clean.updated_by).toEqual('Paul')
+  })
+
+  it('should not modify the attributes definition', function () {
+    var person = new Person({
+      firstName: 'John',
+      lastName: 'Smith',
+      updated_by: 'Paul'
+    })
+
+    var Robot = Model('Robot')
+      .attributes({
+        name: String
+      })
+      .use(new BooleanAttributesMixin())
+
+    var robot = new Robot({
+      name: 'Robotron',
+      enabled: true
+    })
+
+    expect(person.$clean.enabled).toEqual(false)
+    expect(robot.$clean.enabled).toEqual(true)
+  })
+})
+
 describe('A Model modified using a mixin that defines derived properties', function () {
   const { Model, Mixin } = require('..')
   const mixinSpy = jasmine.createSpy()
