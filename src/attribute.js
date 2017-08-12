@@ -124,13 +124,30 @@ class Attribute {
 
   parseType (type) {
     let typeDefinition
+    const Model = require('./model')
+
     if (type instanceof Array) {
       if (type.length === 1) {
-        Object.defineProperty(this, 'collection', {value: true})
-        typeDefinition = type[0]
+        if (Model.isModel(type)) {
+          type = type[0].List
+        } else {
+          type = {
+            collection: 'array',
+            model: type[0]
+          }
+        }
       } else {
-        throw new AttributeDefinitionException('type', 'Type for attribute ' + this.name + ' can\'t be an array with multiple values', type)
+        throw new AttributeDefinitionException(
+          'type',
+          `Type for attribute ${this.name} can't be an array with multiple values`,
+          type
+        )
       }
+    }
+
+    if (type.model && typeof type.collection === 'string') {
+      Object.defineProperty(this, 'collection', {value: type.collection})
+      typeDefinition = type.model
     } else {
       Object.defineProperty(this, 'collection', {value: false})
       typeDefinition = type
@@ -182,22 +199,22 @@ class Attribute {
     } else if (this.initial != null) {
       value = this.initial
     }
-    if (this.collection) {
-      this.initializeArrayInTarget(object, value)
+    if (this.collection !== false) {
+      this.initializeCollectionInTarget(object, value)
     } else if (value != null) {
       this.updateInTarget(object, value)
     }
   }
 
-  initializeArrayInTarget (object, value) {
-    let array
+  initializeCollectionInTarget (object, value) {
+    let collection
     let attribute = this
 
     if (this.isModel) {
-      array = this.baseType.createCollection()
+      collection = this.baseType.createCollection(this.collection)
     } else {
-      array = EmittingArray.create()
-      array.$on('adding', function (event) {
+      collection = EmittingArray.create()
+      collection.$on('adding', function (event) {
         let {elements} = event
         event.elements = elements.map(function (element) {
           if (element != null) {
@@ -207,14 +224,14 @@ class Attribute {
       })
     }
 
-    object.$data[this.name] = array
+    object.$data[this.name] = collection
     if (this.isModel) {
-      array.$on('add', function (elements) {
+      collection.$on('add', function (elements) {
         for (let item of elements) {
           item.$addParent(object, object.$tracker(attribute.name))
         }
       })
-      array.$on('remove', function (elements) {
+      collection.$on('remove', function (elements) {
         for (let item of elements) {
           item.$removeParent(object, object.$tracker(attribute.name))
         }
@@ -225,13 +242,16 @@ class Attribute {
     let listener = function (operation, items) {
       object.$didChange({[attribute.name]: {[operation]: items}})
     }
-    array.$on('add', listener.bind(array, 'added'))
-    array.$on('remove', listener.bind(array, 'removed'))
+    collection.$on('add', listener.bind(collection, 'added'))
+    collection.$on('remove', listener.bind(collection, 'removed'))
   }
 
   updateInTarget (object, value) {
-    if (this.collection) {
+    if (this.collection === 'array') {
       this.updateArrayInTarget(object, value)
+      return false
+    } else if (this.collection === 'object') {
+      this.updateMapInTarget(object, value)
       return false
     } else {
       let nextValue = this.generator(value)
@@ -241,6 +261,7 @@ class Attribute {
           oldValue.$updateAttributes(nextValue.$clean)
         } else {
           if (this.isModel && oldValue != null) {
+            console.log(this.collection, oldValue)
             oldValue.$removeParent(object, object.$tracker(this.name))
           }
           object.$data[this.name] = nextValue
@@ -270,9 +291,21 @@ class Attribute {
     currentItems.$updateAll(newItems)
   }
 
+  updateMapInTarget (object, value) {
+    object.$data[this.name].$updateAll(value || {})
+  }
+
   constainsModelInstance (parent, child) {
-    if (this.collection) {
+    if (this.collection === 'array') {
       return parent.$data[this.name].includes(child)
+    } else if (this.collection === 'map') {
+      let coll = parent.$data[this.name]
+      for (let key of Object.keys(coll)) {
+        if (coll[key] === child) {
+          return true
+        }
+      }
+      return false
     } else {
       return parent.$data[this.name] === child
     }

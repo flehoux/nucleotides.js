@@ -2,7 +2,7 @@
 
 describe('A Collection of a simple model', function () {
   const {Model, Protocol} = require('..')
-  const Collection = require('../src/collection')
+  const {ArrayCollection} = require('../src/collection')
 
   const Person = Model('Person')
     .set(Protocol.Identifiable.idKey, 'id')
@@ -13,14 +13,14 @@ describe('A Collection of a simple model', function () {
     })
 
   it('automatically cast its items to the set model', function () {
-    var coll = Collection.create(Person, {age: '25', name: 'John Smith'})
+    var coll = ArrayCollection.create(Person, {age: '25', name: 'John Smith'})
     expect(coll.$model).toBe(Person)
     expect(coll[0]).toEqual(jasmine.any(Person))
     expect(coll[0].age).toBe(25)
   })
 
   it('automatically cast added items to the set model', function () {
-    var coll = Collection.create(Person)
+    var coll = ArrayCollection.create(Person)
     coll.push({age: '25', name: 'John Smith'}, {age: '26', name: 'Larry Smith'})
     expect(coll[0]).toEqual(jasmine.any(Person))
     expect(coll[0].age).toBe(25)
@@ -41,7 +41,7 @@ describe('A Collection of a simple model', function () {
   })
 
   it('automatically maintain a map of items by their key', function () {
-    var coll = Collection.create(Person)
+    var coll = ArrayCollection.create(Person)
     coll.push(
       {age: '25', name: 'John Smith', id: '1'},
       {age: '26', name: 'Larry Smith', id: '2'}
@@ -131,7 +131,7 @@ describe('A Collection of a simple model', function () {
       {age: 27, name: 'Mary Smith', id: '3'},
       {age: 28, name: 'Kary Smith', id: '4'}
     ]
-    let coll = Person.createCollection(...items)
+    let coll = Person.createCollection(items)
     let [john, larry, mary] = coll
     coll.$updateAll([
       {age: 35, name: 'John Smith', id: '1'},

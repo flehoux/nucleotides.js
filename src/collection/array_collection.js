@@ -1,20 +1,21 @@
 'use strict'
 
 const $$model = Symbol('Model')
-const $$map = Symbol('map')
+const $$map = Symbol.for('map')
+const $$key = Symbol('key')
 
-const EmittingArray = require('./emitting_array')
-const Model = require('./model')
-const Collectable = require('./protocols/collectable')
-const Identifiable = require('./protocols/identifiable')
+const EmittingArray = require('../emitting_array')
+const Model = require('../model')
+const Collectable = require('../protocols/collectable')
+const Identifiable = require('../protocols/identifiable')
 
-class Collection extends EmittingArray {
+class ArrayCollection extends EmittingArray {
   static get [Symbol.species] () {
-    return Collection
+    return ArrayCollection
   }
 
   static create (model, ...args) {
-    let coll = new Collection()
+    let coll = new ArrayCollection()
     coll.$model = model
     coll.push(...args)
     return coll
@@ -22,8 +23,40 @@ class Collection extends EmittingArray {
 
   constructor (...args) {
     super(...args)
+    this[$$key] = Symbol('key')
     this.$on('adding', event => { this.transformElements(event) })
+    this.$on('add', function (elements) {
+      let listenerKey = this[$$key]
+      for (let element of elements) {
+        element[listenerKey] = (diff) => {
+          this.$emit('change', {[this.indexOf(element)]: diff})
+        }
+        element.$on('change', element[listenerKey])
+      }
+    })
+    this.$on('remove', function (elements) {
+      let listenerKey = this[$$key]
+      for (let element of elements) {
+        element.$off('change', element[listenerKey])
+      }
+    })
     this[$$map] = {}
+  }
+
+  slice (n) {
+    return ArrayCollection.create(this.$model, ...super.slice(0))
+  }
+
+  get $byKey () {
+    return this[$$map]
+  }
+
+  get $clean () {
+    let results = []
+    for (let item of this) {
+      results.push(item.$clean)
+    }
+    return results
   }
 
   transformElements (event) {
@@ -54,18 +87,6 @@ class Collection extends EmittingArray {
 
   get $model () {
     return this[$$model]
-  }
-
-  get $byKey () {
-    return this[$$map]
-  }
-
-  get $clean () {
-    let results = []
-    for (let item of this) {
-      results.push(item.$clean)
-    }
-    return results
   }
 
   prepareCollection () {
@@ -108,16 +129,13 @@ class Collection extends EmittingArray {
     return this[$$map][id] != null
   }
 
-  slice (n) {
-    return Collection.create(this.$model, ...super.slice(0))
-  }
-
   $replace (object) {
     let existing = this.$get(object)
     if (existing != null) {
       let idx = this.indexOf(existing)
       this.splice(idx, 1, object)
     }
+    return this
   }
 
   $put (object) {
@@ -128,6 +146,7 @@ class Collection extends EmittingArray {
     } else {
       this.push(object)
     }
+    return this
   }
 
   $remove (object) {
@@ -136,6 +155,7 @@ class Collection extends EmittingArray {
       let idx = this.indexOf(existing)
       this.splice(idx, 1)
     }
+    return this
   }
 
   $update (object, upsert = false) {
@@ -148,6 +168,7 @@ class Collection extends EmittingArray {
     } else if (upsert) {
       this.push(object)
     }
+    return this
   }
 
   $updateAll (items) {
@@ -182,4 +203,4 @@ class Collection extends EmittingArray {
   }
 }
 
-module.exports = Collection
+module.exports = ArrayCollection

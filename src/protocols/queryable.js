@@ -31,9 +31,8 @@ function ensureInstance (response, model) {
 }
 
 function ensureListOfInstance (response, model) {
-  const Collection = require('../collection')
   const Model = require('../model')
-  let result = Collection.create(model)
+  let result = model.createCollection('array', [])
   let values
   if (response instanceof Success) {
     values = response.result

@@ -52,6 +52,16 @@ function generateModel (name) {
     mixins: {
       value: klass[$$mixins],
       __proto__: null
+    },
+    List: {
+      get: function () {
+        return {model: this, collection: 'array'}
+      }
+    },
+    Map: {
+      get: function () {
+        return {model: this, collection: 'map'}
+      }
     }
   })
 
@@ -89,20 +99,33 @@ function generateModel (name) {
     return klass
   }
 
-  klass.createCollection = function (...elements) {
-    if (elements.length === 1 && typeof elements[0] === 'function') {
+  klass.createCollection = function (type, elements) {
+    if (typeof type !== 'string') {
+      elements = type
+      type = 'array'
+    }
+
+    if (elements == null) {
+      elements = []
+    }
+
+    if (typeof elements === 'function') {
       const CollectablePromise = require('./collectable_promise')
       let [getter] = elements
       let result = getter()
       if (result != null && typeof result.then === 'function') {
-        return new CollectablePromise(result, this)
+        return new CollectablePromise(type, result, this)
       } else if (typeof result.length === 'number' && result[0] && typeof result[0].then === 'function') {
-        return new CollectablePromise(Promise.all(result), this)
+        return new CollectablePromise(type, Promise.all(result), this)
       } else {
-        return new CollectablePromise(Promise.resolve(result), this)
+        return new CollectablePromise(type, Promise.resolve(result), this)
       }
+    } else if (type === 'array') {
+      return require('./collection').ArrayCollection.create(this, ...elements)
+    } else if (type === 'map') {
+      return require('./collection').MapCollection.create(this, ...elements)
     } else {
-      return require('./collection').create(this, ...elements)
+      throw new Error("Provided collection type should be either 'array' or 'map'")
     }
   }
 
@@ -235,6 +258,9 @@ function generateModel (name) {
 
   Object.assign(klass.prototype, {
     $updateAttributes: function (data) {
+      if (Model.isInstance(data)) {
+        data = data.$clean
+      }
       const difference = {}
       for (const attributeName in data) {
         if (attributeName in klass.attributes()) {

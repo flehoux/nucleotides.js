@@ -55,7 +55,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        let people = Person.createCollection(inst2)
+        let people = Person.createCollection([inst2])
         people.$autoUpdate()
         inst1.firstName = 'Larry'
         inst1.$save().then(function () {
@@ -97,7 +97,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        let people = Person.createCollection(inst2)
+        let people = Person.createCollection([inst2])
         let unlisten = people.$autoUpdate()
         unlisten()
         inst1.firstName = 'Larry'
@@ -146,7 +146,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
 
-        let people = Person.createCollection(inst2)
+        let people = Person.createCollection([inst2])
         expect(inst2).toBe(people[0])
         people.$autoUpdate(function (current, {firstName}) {
           return firstName.slice(0, 1) !== 'L'
@@ -202,7 +202,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       expect(inst1.$isNew).toBe(false)
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
-        let people = Person.createCollection(inst2)
+        let people = Person.createCollection([inst2])
         expect(inst2).toBe(people[0])
         people.$autoUpdate(function (current, {firstName}) {
           return new Promise(function (resolve) {
