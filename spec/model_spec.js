@@ -263,7 +263,7 @@ describe('A Model with an attribute typed as another Model', function () {
     person.$on('change', spy)
 
     let email = new Email('john@smith.org')
-    person.emails[0] = email
+    person.emails.splice(0, 1, email)
 
     setTimeout(function () {
       expect(spy.calls.count()).toBe(2)

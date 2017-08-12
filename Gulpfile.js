@@ -23,7 +23,17 @@ gulp.task('javascript', function () {
 
   globby(['./spec/**/*_spec.js']).then(function (entries) {
     browserify({entries: entries})
-    .transform('babelify', {presets: ['es2015']})
+    .transform('babelify', {
+      presets: ['es2015'],
+      plugins: [
+        [
+          'babel-plugin-transform-builtin-extend',
+          {
+            globals: ['Error', 'Array']
+          }
+        ]
+      ]
+    })
     .bundle()
     .pipe(bundledStream)
   }).catch(function (err) {

@@ -62,23 +62,4 @@ describe('An EmittingArray instance', function () {
     elements = removeSpy.calls.argsFor(0)[0]
     expect(elements).toEqual(['c'])
   })
-
-  it("should emit 'add' and 'remove' events for index access", function () {
-    let array = EmittingArray.create('a', 'b', 'c')
-    let addSpy = jasmine.createSpy()
-    let removeSpy = jasmine.createSpy()
-    array.$on('add', addSpy)
-    array.$on('remove', removeSpy)
-
-    array[1] = 'z'
-    expect(addSpy.calls.count()).toBe(1)
-    expect(removeSpy.calls.count()).toBe(1)
-    expect(Array.from(array)).toEqual(['a', 'z', 'c'])
-
-    delete array[1]
-    expect(addSpy.calls.count()).toBe(1)
-    expect(removeSpy.calls.count()).toBe(2)
-
-    expect(Array.from(array)).toEqual(['a', undefined, 'c'])
-  })
 })

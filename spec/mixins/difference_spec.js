@@ -74,10 +74,6 @@ describe('A simple Model modified using the DifferenceMixin', function () {
     p.emails[0] = 'john@smith.org'
     expect(p.$difference).toEqual({})
     expect(p.$isPristine).toBe(true)
-
-    p.emails[0] = 'ron@smith.org'
-    expect(p.$difference).toEqual({emails: ['ron@smith.org']})
-    expect(p.$isPristine).toBe(false)
   })
 })
 

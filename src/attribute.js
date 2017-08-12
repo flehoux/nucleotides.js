@@ -190,12 +190,11 @@ class Attribute {
   }
 
   initializeArrayInTarget (object, value) {
-    const Collection = require('./collection')
     let array
     let attribute = this
 
     if (this.isModel) {
-      array = Collection.create(this.baseType)
+      array = this.baseType.createCollection()
     } else {
       array = EmittingArray.create()
       array.$on('adding', function (event) {

@@ -3,7 +3,6 @@
 const $$model = Symbol('Model')
 const $$map = Symbol('map')
 
-const makeEmitter = require('./emitter')
 const EmittingArray = require('./emitting_array')
 const Model = require('./model')
 const Collectable = require('./protocols/collectable')
@@ -14,23 +13,16 @@ class Collection extends EmittingArray {
     return Collection
   }
 
-  [Symbol.iterator] () {
-    return this.$safe[Symbol.iterator]()
-  }
-
   static create (model, ...args) {
-    let newCollection = Reflect.construct(this, [])
-    makeEmitter(newCollection)
-    newCollection.$on('adding', newCollection.transformElements)
-    newCollection.$on('add', () => { newCollection.length = newCollection.$safe.length })
-    newCollection.$on('remove', () => { newCollection.length = newCollection.$safe.length })
-    newCollection.$model = model
-    newCollection.push(...args)
-    return new Proxy(newCollection, this.proxyHandler)
+    let coll = new Collection()
+    coll.$model = model
+    coll.push(...args)
+    return coll
   }
 
-  constructor () {
-    super()
+  constructor (...args) {
+    super(...args)
+    this.$on('adding', event => { this.transformElements(event) })
     this[$$map] = {}
   }
 
@@ -70,7 +62,7 @@ class Collection extends EmittingArray {
 
   get $clean () {
     let results = []
-    for (let item of this.$safe) {
+    for (let item of this) {
       results.push(item.$clean)
     }
     return results
@@ -117,13 +109,13 @@ class Collection extends EmittingArray {
   }
 
   slice (n) {
-    return Collection.create(this.$model, ...this.$safe.slice(0))
+    return Collection.create(this.$model, ...super.slice(0))
   }
 
   $replace (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.$safe.indexOf(existing)
+      let idx = this.indexOf(existing)
       this.splice(idx, 1, object)
     }
   }
@@ -131,7 +123,7 @@ class Collection extends EmittingArray {
   $put (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.$safe.indexOf(existing)
+      let idx = this.indexOf(existing)
       this.splice(idx, 1, object)
     } else {
       this.push(object)
@@ -141,7 +133,7 @@ class Collection extends EmittingArray {
   $remove (object) {
     let existing = this.$get(object)
     if (existing != null) {
-      let idx = this.$safe.indexOf(existing)
+      let idx = this.indexOf(existing)
       this.splice(idx, 1)
     }
   }
@@ -159,7 +151,7 @@ class Collection extends EmittingArray {
   }
 
   $updateAll (items) {
-    let currentItems = this.$safe.slice(0)
+    let currentItems = this.slice(0)
     let newItems = []
     for (let item of items) {
       let currentItem = this.$get(item)
