@@ -3,6 +3,7 @@
 const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
 const $$key = Symbol('key')
+const $$set = Symbol('set')
 
 const makeEmitter = require('../emitter')
 const Model = require('../model')
@@ -64,11 +65,18 @@ class MapCollection {
 
   constructor () {
     this[$$key] = Symbol('key')
+    this[$$set] = new Set()
+    this.$on('add', item => this[$$set].add(item))
+    this.$on('remove', item => this[$$set].delete(item))
     this.$on('adding', event => { this.transformElements(event) })
   }
 
   get [$$map] () {
     return this
+  }
+
+  get $set () {
+    return this[$$set]
   }
 
   get $key () {

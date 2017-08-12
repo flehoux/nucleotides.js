@@ -227,13 +227,25 @@ class Attribute {
     object.$data[this.name] = collection
     if (this.isModel) {
       collection.$on('add', function (elements) {
-        for (let item of elements) {
-          item.$addParent(object, object.$tracker(attribute.name))
+        if (attribute.collection === 'array') {
+          for (let item of elements) {
+            item.$addParent(object, object.$tracker(attribute.name))
+          }
+        } else if (attribute.collection === 'map') {
+          for (let key in elements) {
+            elements[key].$addParent(object, object.$tracker(attribute.name))
+          }
         }
       })
       collection.$on('remove', function (elements) {
-        for (let item of elements) {
-          item.$removeParent(object, object.$tracker(attribute.name))
+        if (attribute.collection === 'array') {
+          for (let item of elements) {
+            item.$removeParent(object, object.$tracker(attribute.name))
+          }
+        } else if (attribute.collection === 'map') {
+          for (let key in elements) {
+            elements[key].$addParent(object, object.$tracker(attribute.name))
+          }
         }
       })
     }
@@ -250,7 +262,7 @@ class Attribute {
     if (this.collection === 'array') {
       this.updateArrayInTarget(object, value)
       return false
-    } else if (this.collection === 'object') {
+    } else if (this.collection === 'map') {
       this.updateMapInTarget(object, value)
       return false
     } else {
@@ -261,7 +273,6 @@ class Attribute {
           oldValue.$updateAttributes(nextValue.$clean)
         } else {
           if (this.isModel && oldValue != null) {
-            console.log(this.collection, oldValue)
             oldValue.$removeParent(object, object.$tracker(this.name))
           }
           object.$data[this.name] = nextValue
