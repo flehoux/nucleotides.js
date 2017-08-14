@@ -4,6 +4,7 @@ class EmittingArray extends Array {
   static get [Symbol.species] () {
     return EmittingArray
   }
+
   static create (...args) {
     return Reflect.construct(this, args)
   }

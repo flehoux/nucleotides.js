@@ -44,7 +44,15 @@ class ArrayCollection extends EmittingArray {
   }
 
   slice (n) {
-    return ArrayCollection.create(this.$model, ...super.slice(0))
+    let newColl = ArrayCollection.create(this.$model)
+    newColl.push(...super.slice(n))
+    return newColl
+  }
+
+  filter (...args) {
+    let newColl = ArrayCollection.create(this.$model)
+    newColl.push(...super.filter(...args))
+    return newColl
   }
 
   get $byKey () {

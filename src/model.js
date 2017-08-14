@@ -111,7 +111,7 @@ function generateModel (name) {
 
     if (typeof elements === 'function') {
       const CollectablePromise = require('./collectable_promise')
-      let [getter] = elements
+      let getter = elements
       let result = getter()
       if (result != null && typeof result.then === 'function') {
         return new CollectablePromise(type, result, this)

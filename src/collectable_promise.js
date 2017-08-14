@@ -1,7 +1,13 @@
 const {ArrayCollection, MapCollection} = require('./collection')
 
 class CollectablePromise {
-  constructor (promise, model) {
+  constructor (type, promise, model) {
+    if (typeof type !== 'string') {
+      model = promise
+      promise = type
+      type = 'array'
+    }
+    this.type = type
     this.model = model
     this.promise = promise.then((items) => {
       if (this.isCollection(items) && items.$model != null) {
