@@ -69,7 +69,7 @@ function autoUpdateCollection (mixin) {
         break
 
       case 'created':
-        if (typeof collection.matches === 'function' && collection.matches(source)) {
+        if (typeof collection.matches !== 'function' || collection.matches(source)) {
           collection.push(source.$clone())
         }
         break
