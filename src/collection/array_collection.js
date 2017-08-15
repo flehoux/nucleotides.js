@@ -166,20 +166,20 @@ class ArrayCollection extends EmittingArray {
     return this
   }
 
-  $update (object, upsert = false) {
+  $update (object, options = {}) {
     let existing = this.$get(object)
     if (existing != null) {
       if (Model.isInstance(object)) {
         object = object.$clean
       }
-      existing.$updateAttributes(object)
-    } else if (upsert) {
+      existing.$updateAttributes(object, options)
+    } else if (options.upsert === true) {
       this.push(object)
     }
     return this
   }
 
-  $updateAll (items) {
+  $updateAll (items, options) {
     let currentItems = this.slice(0)
     let newItems = []
     for (let item of items) {
@@ -190,7 +190,7 @@ class ArrayCollection extends EmittingArray {
         if (Model.isInstance(item)) {
           item = item.$clean
         }
-        currentItem.$updateAttributes(item)
+        currentItem.$updateAttributes(item, options)
         idx = items.indexOf(item)
         items.splice(idx, 1, currentItem)
       } else {

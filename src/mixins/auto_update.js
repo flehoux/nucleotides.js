@@ -19,11 +19,11 @@ function autoUpdateObject (mixin, conditional) {
       let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
-        self.$updateAttributes(clean)
+        self.$updateAttributes(clean, {broadcasted: true})
       } else if (response != null && typeof response.then === 'function') {
         response.then((resolved) => {
           if (resolved === true) {
-            self.$updateAttributes(clean)
+            self.$updateAttributes(clean, {broadcasted: true})
           }
         })
       }
@@ -33,7 +33,7 @@ function autoUpdateObject (mixin, conditional) {
       if (self === committed) {
         return
       }
-      self.$updateAttributes(committed.$clean)
+      self.$updateAttributes(committed.$clean, {broadcasted: true})
     }
   }
   let eventKey = mixin.eventKey(this)

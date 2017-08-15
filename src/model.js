@@ -9,6 +9,8 @@ const $$isModel = Symbol('isModel')
 const $$parents = Symbol('parents')
 const $$referenceTracker = Symbol('referenceTracker')
 const $$protocols = Symbol.for('protocols')
+const $$spawning = Symbol('spawning')
+const $$updating = Symbol('updating')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -31,7 +33,7 @@ function generateModel (name) {
     this[$$data] = {}
     this[$$parents] = {}
     this[$$referenceTracker] = {}
-
+    this[$$spawning] = true
     klass.$emit('creating', this)
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
@@ -40,6 +42,7 @@ function generateModel (name) {
         this[$$parents][parentKey].$childDidChange(this, diff)
       }
     })
+    delete this[$$spawning]
   })
 
   klass[$$attributes] = {}
@@ -257,11 +260,12 @@ function generateModel (name) {
   })
 
   Object.assign(klass.prototype, {
-    $updateAttributes: function (data) {
+    $updateAttributes (data, options) {
       if (Model.isInstance(data)) {
         data = data.$clean
       }
       const difference = {}
+      this[$$updating] = true
       for (const attributeName in data) {
         if (attributeName in klass.attributes()) {
           const attribute = klass.attribute(attributeName)
@@ -270,13 +274,14 @@ function generateModel (name) {
           }
         }
       }
+      delete this[$$updating]
       if (Object.keys(difference).length > 0) {
-        this.$didChange(difference)
+        this.$didChange(difference, options)
       }
       return this
     },
 
-    $ensure: function (...names) {
+    $ensure (...names) {
       const promises = []
       for (name of names) {
         const derived = klass[$$derived][name]
@@ -288,18 +293,22 @@ function generateModel (name) {
       return Promise.all(promises).then(() => this)
     },
 
-    $setTracker: function (name, symbol) {
+    $clone () {
+      return Reflect.construct(klass, [this.$clean])
+    },
+
+    $setTracker (name, symbol) {
       this[$$referenceTracker][name] = symbol
       this[$$referenceTracker][symbol] = name
     },
 
-    $tracker: function (ref) {
+    $tracker (ref) {
       if (typeof ref === 'string' || typeof ref === 'symbol') {
         return this[$$referenceTracker][ref]
       }
     },
 
-    $addParent: function (parent, key) {
+    $addParent (parent, key) {
       const newInParent = !this[$$parents].hasOwnProperty(key)
       this[$$parents][key] = parent
       if (newInParent) {
@@ -308,7 +317,7 @@ function generateModel (name) {
       this.$parent = parent
     },
 
-    $removeParent: function (parent, key) {
+    $removeParent (parent, key) {
       const existedInParent = this[$$parents].hasOwnProperty(key)
       delete this[$$parents][key]
       if (existedInParent) {
@@ -319,18 +328,19 @@ function generateModel (name) {
       }
     },
 
-    $childDidChange: function (child, diff) {
+    $childDidChange (child, diff, options) {
       for (const attributeName in klass.attributes()) {
         const attribute = klass.attribute(attributeName)
         if (Model.isModel(attribute.baseType, child) && attribute.constainsModelInstance(this, child)) {
-          this.$didChange({[attribute.name]: diff})
+          this.$didChange({[attribute.name]: diff}, options)
         }
       }
     },
 
-    $didChange: function (difference) {
-      this.$emit('change', difference)
-      klass.$emit('change', this, difference)
+    $didChange (difference, options) {
+      if (this[$$spawning] === true || this[$$updating] === true) return
+      this.$emit('change', difference, options)
+      klass.$emit('change', this, difference, options)
     }
   })
 

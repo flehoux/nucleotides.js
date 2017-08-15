@@ -95,7 +95,9 @@ function doFindMany (...args) {
 }
 
 function doDelete (...args) {
-  return Queryable.remove(this, ...args)
+  return Queryable.remove(this, ...args).then((resp) => {
+    this.constructor.$emit('removed', this)
+  })
 }
 
 function doCreate (...args) {
@@ -118,6 +120,9 @@ function doCreate (...args) {
 function doSave (...args) {
   let promise = Queryable.store(this, ...args)
   return promise.then((resp) => {
+    if (this.$isNew) {
+      this.constructor.$emit('created', this)
+    }
     this.$isNew = false
     this.$emit('saved')
     this.constructor.$emit('saved', this)

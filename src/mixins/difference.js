@@ -19,8 +19,11 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     return this[$$difference]
   })
 
-DifferenceMixin.prototype.mergeDifference = function (model, object, previousDifference, diff) {
+DifferenceMixin.prototype.mergeDifference = function (model, object, previousDifference, diff, options) {
   let excluded = this.excluded
+  if (options != null && options.broadcasted === true) {
+    return
+  }
   for (let attrName of excluded) {
     delete diff[attrName]
   }
@@ -41,8 +44,8 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
 DifferenceMixin.$on('use', function (mixin, model) {
   model.$on('new', (object) => object.$setPristine())
   model.$on('saved', (object) => object.$setPristine())
-  model.$on('change', function (object, diff) {
-    mixin.mergeDifference(this, object, object.$difference, diff)
+  model.$on('change', function (object, diff, options) {
+    mixin.mergeDifference(this, object, object.$difference, diff, options)
   })
 })
 
