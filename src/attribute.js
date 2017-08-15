@@ -24,7 +24,10 @@ class Attribute {
   static generatorForBaseType (attribute, type) {
     let Model = require('./model')
     if (type === String) {
-      return (value) => value.toString()
+      return (value) => {
+        if (value == null) return ''
+        return value.toString()
+      }
     } else if (type === Number) {
       return (value) => {
         if (typeof value === 'number') {
