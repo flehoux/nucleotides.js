@@ -45,36 +45,34 @@ function autoUpdateObject (mixin, conditional) {
   }
 }
 
-function autoUpdateCollection (mixin, conditional) {
+function autoUpdateCollection (mixin) {
   if (this[$$autoUpdating] != null) {
     this.$model.$off($$eventKey, this[$$autoUpdating])
   }
   let collection = this
-  let listen
-  if (typeof conditional === 'function') {
-    listen = function (source) {
-      let destination = collection.$get(source)
-      if (destination === source || destination == null) {
-        return
-      }
-      let clean = source.$clean
-      let response = conditional.call(collection, destination, clean)
-      if (response === true) {
-        destination.$updateAttributes(clean)
-      } else if (response != null && typeof response.then === 'function') {
-        response.then((resolved) => {
-          if (resolved === true) {
-            destination.$updateAttributes(clean)
-          }
-        })
-      }
+  let listen = function (operation, source) {
+    let localCopy = collection.$get(source)
+    if (localCopy === source) {
+      return
     }
-  } else {
-    listen = function (source) {
-      if (collection.$get(source) === source) {
-        return
-      }
-      collection.$update(source.$clean, false)
+    switch (operation) {
+      case 'saved':
+        if (typeof collection.matches === 'function' && !collection.matches(source)) {
+          collection.$remove(localCopy)
+          break
+        }
+        collection.$update(source.$clean, {broadcasted: true})
+        break
+
+      case 'removed':
+        collection.$remove(localCopy)
+        break
+
+      case 'created':
+        if (typeof collection.matches === 'function' && collection.matches(source)) {
+          collection.push(source.$clone())
+        }
+        break
     }
   }
   this.$model.$on($$eventKey, listen)
@@ -109,7 +107,13 @@ const AutoUpdateMixin = Mixin('AutoUpdateMixin')
 AutoUpdateMixin.$on('use', function (mixin, model) {
   model.$on('saved', function (object) {
     object.constructor.$emit(mixin.eventKey(object), object)
-    object.constructor.$emit($$eventKey, object)
+    object.constructor.$emit($$eventKey, 'saved', object)
+  })
+  model.$on('removed', function (object) {
+    object.constructor.$emit($$eventKey, 'removed', object)
+  })
+  model.$on('created', function (object) {
+    object.constructor.$emit($$eventKey, 'created', object)
   })
   model.$on('mount', function (object, options = {}) {
     if (options.autoUpdate !== false) {
