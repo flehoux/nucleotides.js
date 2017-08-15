@@ -57,11 +57,15 @@ function autoUpdateCollection (mixin) {
     }
     switch (operation) {
       case 'saved':
-        if (typeof collection.matches === 'function' && !collection.matches(source)) {
-          collection.$remove(localCopy)
-          break
+        if (typeof collection.matches === 'function') {
+          if (collection.matches(source)) {
+            collection.$update(source.$clean, {broadcasted: true, upsert: true})
+          } else {
+            collection.$remove(localCopy)
+          }
+        } else {
+          collection.$update(source.$clean, {broadcasted: true, upsert: true})
         }
-        collection.$update(source.$clean, {broadcasted: true})
         break
 
       case 'removed':
