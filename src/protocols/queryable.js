@@ -97,6 +97,7 @@ function doFindMany (...args) {
 function doDelete (...args) {
   return Queryable.remove(this, ...args).then((resp) => {
     this.constructor.$emit('removed', this)
+    return resp
   })
 }
 
