@@ -57,6 +57,7 @@ function autoUpdateCollection (mixin) {
     }
     switch (operation) {
       case 'saved':
+      case 'created':
         if (typeof collection.matches === 'function') {
           if (collection.matches(source)) {
             collection.$update(source.$clean, {broadcasted: true, upsert: true})
@@ -70,12 +71,6 @@ function autoUpdateCollection (mixin) {
 
       case 'removed':
         collection.$remove(localCopy)
-        break
-
-      case 'created':
-        if (typeof collection.matches !== 'function' || collection.matches(source)) {
-          collection.push(source.$clone())
-        }
         break
     }
   }
