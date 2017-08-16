@@ -136,7 +136,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
     })
   })
 
-  it('should not propagate saved updates to a collection if callback returns false', function (done) {
+  it('should remove collection item if collection.matches(item) returns false', function (done) {
     let id = getNewId()
     let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
 
@@ -148,18 +148,53 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
 
         let people = Person.createCollection([inst2])
         expect(inst2).toBe(people[0])
-        people.$autoUpdate(function (current, {firstName}) {
-          return firstName.slice(0, 1) !== 'L'
+        people.$autoUpdate()
+        people.matches = () => false
+        inst1.$save().then(function () {
+          expect(people.length).toBe(0)
+          done()
         })
+      })
+    })
+  })
+
+  it('should add item to collection if callback returns true', function (done) {
+    let id = getNewId()
+    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
+
+    expect(inst1.$isNew).toBe(true)
+    inst1.$save().then(function () {
+      expect(inst1.$isNew).toBe(false)
+      let people = Person.createCollection()
+      people.$autoUpdate()
+      people.matches = () => true
+      inst1.$save().then(function () {
+        expect(people.length).toBe(1)
+        expect(people[0].$clean).toEqual(inst1.$clean)
+        done()
+      })
+    })
+  })
+
+  it('should remove collection item if collection.matches(item) returns false', function (done) {
+    let id = getNewId()
+    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
+
+    expect(inst1.$isNew).toBe(true)
+    inst1.$save().then(function () {
+      expect(inst1.$isNew).toBe(false)
+      Person.findOne(id).then(function (inst2) {
+        expect(inst2.fullName).toBe('John Smith')
+
+        let people = Person.createCollection([inst2])
+        expect(inst2).toBe(people[0])
+        people.$autoUpdate()
+        people.matches = () => true
         inst1.firstName = 'Larry'
         inst1.$save().then(function () {
-          expect(people[0].fullName).toBe('John Smith')
-          inst1.firstName = 'Bob'
-          inst1.$save().then(function () {
-            expect(people[0].fullName).toBe('Bob Smith')
-            delete storage[id]
-            done()
-          })
+          expect(people.length).toBe(1)
+          expect(people[0].fullName).toBe('Larry Smith')
+          done()
         })
       })
     })
@@ -175,36 +210,6 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       Person.findOne(id).then(function (inst2) {
         expect(inst2.fullName).toBe('John Smith')
         inst2.$autoUpdate(function ({firstName}) {
-          return new Promise(function (resolve) {
-            resolve(firstName.slice(0, 1) !== 'L')
-          })
-        })
-        inst1.firstName = 'Larry'
-        inst1.$save().then(function () {
-          expect(inst2.fullName).toBe('John Smith')
-          inst1.firstName = 'Bob'
-          inst1.$save().then(function () {
-            expect(inst2.fullName).toBe('Bob Smith')
-            delete storage[id]
-            done()
-          })
-        })
-      })
-    })
-  })
-
-  it('should not propagate saved updates to a collection if callback yields false asynchronously', function (done) {
-    let id = getNewId()
-    let inst1 = new Person({ firstName: 'John', lastName: 'Smith', nas: id })
-
-    expect(inst1.$isNew).toBe(true)
-    inst1.$save().then(function () {
-      expect(inst1.$isNew).toBe(false)
-      Person.findOne(id).then(function (inst2) {
-        expect(inst2.fullName).toBe('John Smith')
-        let people = Person.createCollection([inst2])
-        expect(inst2).toBe(people[0])
-        people.$autoUpdate(function (current, {firstName}) {
           return new Promise(function (resolve) {
             resolve(firstName.slice(0, 1) !== 'L')
           })
