@@ -19,11 +19,11 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     return this[$$difference]
   })
   .method('$rollback', function () {
-    let oldValues = {}
+    let old = {}
     for (let key in this[$$difference]) {
-      oldValues[key] = this[$$difference][key]['oldValue']
+      old[key] = this[$$difference][key]['old']
     }
-    this.$updateAttributes(oldValues)
+    this.$updateAttributes(old)
     this.$setPristine()
   })
 
@@ -37,11 +37,11 @@ DifferenceMixin.prototype.createDifference = function (model, object, previousDi
       let attribute = model.attribute(key)
       previousDifference[key] = {}
       if (attribute.collection) {
-        previousDifference[key]['oldValue'] = diff[key].$clean
+        previousDifference[key]['old'] = diff[key].$clean
       } else if (attribute.isModel) {
-        previousDifference[key]['oldValue'] = diff[key].$clean
+        previousDifference[key]['old'] = diff[key].$clean
       } else {
-        previousDifference[key]['oldValue'] = diff[key]
+        previousDifference[key]['old'] = diff[key]
       }
     }
   }
@@ -61,11 +61,11 @@ DifferenceMixin.prototype.mergeDifference = function (model, object, previousDif
       previousDifference[key] = {}
     }
     if (attribute.collection) {
-      previousDifference[key]['newValue'] = object[key].$clean
+      previousDifference[key]['new'] = object[key].$clean
     } else if (attribute.isModel) {
-      previousDifference[key]['newValue'] = object[key].$clean
+      previousDifference[key]['new'] = object[key].$clean
     } else {
-      previousDifference[key]['newValue'] = diff[key]
+      previousDifference[key]['new'] = diff[key]
     }
   }
 }

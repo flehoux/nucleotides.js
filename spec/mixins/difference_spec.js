@@ -28,7 +28,7 @@ describe('A simple Model modified using the DifferenceMixin', function () {
     expect(p.$isPristine).toBe(true)
 
     p.firstName = 'Mathieu'
-    expect(p.$difference).toEqual({firstName: 'Mathieu'})
+    expect(p.$difference).toEqual({firstName: {old: undefined, new: 'Mathieu'}})
     expect(p.$isPristine).toBe(false)
   })
 
@@ -38,11 +38,11 @@ describe('A simple Model modified using the DifferenceMixin', function () {
     expect(p.$isPristine).toBe(true)
 
     p.firstName = 'Mathieu'
-    expect(p.$difference).toEqual({firstName: 'Mathieu'})
+    expect(p.$difference).toEqual({firstName: {old: undefined, new: 'Mathieu'}})
     expect(p.$isPristine).toBe(false)
 
     p.firstName = 'John'
-    expect(p.$difference).toEqual({firstName: 'John'})
+    expect(p.$difference).toEqual({firstName: {old: undefined, new: 'John'}})
     expect(p.$isPristine).toBe(false)
   })
 
