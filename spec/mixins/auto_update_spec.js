@@ -149,7 +149,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
         let people = Person.createCollection([inst2])
         expect(inst2).toBe(people[0])
         people.$autoUpdate()
-        people.matches = () => false
+        people.$addFilter(() => false)
         inst1.$save().then(function () {
           expect(people.length).toBe(0)
           done()
@@ -167,7 +167,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
       expect(inst1.$isNew).toBe(false)
       let people = Person.createCollection()
       people.$autoUpdate()
-      people.matches = () => true
+      people.$addFilter(() => true)
       inst1.$save().then(function () {
         expect(people.length).toBe(1)
         expect(people[0].$clean).toEqual(inst1.$clean)
@@ -189,7 +189,7 @@ describe('A simple Model augmented using the AutoUpdate Mixin', function () {
         let people = Person.createCollection([inst2])
         expect(inst2).toBe(people[0])
         people.$autoUpdate()
-        people.matches = () => true
+        people.$addFilter(() => true)
         inst1.firstName = 'Larry'
         inst1.$save().then(function () {
           expect(people.length).toBe(1)
