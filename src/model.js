@@ -337,6 +337,12 @@ function generateModel (name) {
       }
     },
 
+    $willChange (difference) {
+      if (this[$$spawning] === true || this[$$updating] === true) return
+      this.$emit('willChange', difference)
+      klass.$emit('willChange', this, difference)
+    },
+
     $didChange (difference, options) {
       if (this[$$spawning] === true || this[$$updating] === true) return
       this.$emit('change', difference, options)

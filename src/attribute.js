@@ -278,6 +278,7 @@ class Attribute {
           if (this.isModel && oldValue != null) {
             oldValue.$removeParent(object, object.$tracker(this.name))
           }
+          object.$willChange({[this.name]: oldValue})
           object.$data[this.name] = nextValue
           if (this.isModel && nextValue != null) {
             nextValue.$addParent(object, object.$tracker(this.name))
