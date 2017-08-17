@@ -247,7 +247,7 @@ class Attribute {
           }
         } else if (attribute.collection === 'map') {
           for (let key in elements) {
-            elements[key].$addParent(object, object.$tracker(attribute.name))
+            elements[key].$removeParent(object, object.$tracker(attribute.name))
           }
         }
       })
