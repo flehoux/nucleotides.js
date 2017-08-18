@@ -42,6 +42,61 @@ describe('An AsyncFlow instance', function () {
     expect(flow.completed).toBe(false)
   })
 
+  it('should call each stacked function and pass down arguments if the .continue() is called in promises throughout the chain', function (done) {
+    let spy1 = jasmine.createSpy()
+    let spy2 = jasmine.createSpy()
+    let spy3 = jasmine.createSpy()
+    let spy4 = jasmine.createSpy()
+
+    let fun1 = (flow, arg) => {
+      spy1(arg)
+      return (new Promise((resolve) => {
+        setTimeout(resolve, 5)
+      })).then(() => {
+        return flow
+          .continue(arg + 1)
+          .then((val) => `Received: ${val}`)
+      })
+    }
+    let fun2 = (flow, arg) => {
+      spy2(arg)
+      return (new Promise((resolve) => {
+        setTimeout(resolve, 5)
+      })).then(() => {
+        return flow.continue(arg + 1)
+      })
+    }
+    let fun3 = (flow, arg) => {
+      spy3(arg)
+      return (new Promise((resolve) => {
+        setTimeout(resolve, 5)
+      })).then(() => {
+        return flow.continue(arg + 1)
+      })
+    }
+    let fun4 = (flow, arg) => {
+      spy4(arg)
+      return (new Promise((resolve) => {
+        setTimeout(resolve, 5)
+      })).then(() => {
+        flow.resolve(`yield ${arg}`)
+      })
+    }
+
+    let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
+    flow.run().then(function () {
+      expect(spy1.calls.count()).toEqual(1)
+      expect(spy2.calls.count()).toEqual(1)
+      expect(spy3.calls.count()).toEqual(1)
+      expect(spy4.calls.count()).toEqual(1)
+      expect(flow.successful).toBe(true)
+      expect(flow.resolved).toBe('Received: yield 4')
+      done()
+    })
+
+    expect(flow.completed).toBe(false)
+  })
+
   it('should follow promise completion if the last .resolve happens asynchronously', function (done) {
     let spy1 = jasmine.createSpy()
     let spy2 = jasmine.createSpy()

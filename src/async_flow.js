@@ -24,6 +24,13 @@ function bindToPromise (promise) {
   }
 }
 
+function isPromiseLike (arg) {
+  if (arg == null) {
+    return false
+  }
+  return ['then', 'catch'].every((name) => typeof arg[name] === 'function')
+}
+
 class AsyncFlow extends Flow {
   constructor (functions, ...args) {
     super(functions, ...args)
@@ -57,7 +64,7 @@ class AsyncFlow extends Flow {
   run () {
     if (this.length > 0) {
       let result = this.head(this, ...this.args)
-      if (result instanceof Promise) {
+      if (isPromiseLike(result)) {
         bindToPromise.call(this, result)
       }
     } else {
@@ -86,7 +93,7 @@ class AsyncFlow extends Flow {
   }
 
   resolve (value) {
-    if (!(value instanceof Promise)) {
+    if (!isPromiseLike(value)) {
       this.result = {status: AsyncFlow.successCode, value: value}
     }
     this[$$resolver](value)
