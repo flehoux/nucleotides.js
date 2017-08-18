@@ -1,9 +1,28 @@
 const $$resolver = Symbol('resolve')
 const $$rejector = Symbol('reject')
-const $$bind = Symbol('bind')
 const $$flow = Symbol('flow')
 
 const Flow = require('./flow')
+
+function bindToPromise (promise) {
+  if (this.promise !== promise) {
+    if (promise.hasOwnProperty($$flow)) {
+      let subflow = promise[$$flow]
+      if (subflow.completed) {
+        if (subflow.successful) {
+          this.resolve(subflow.resolved)
+        } else {
+          this.reject(subflow.reason)
+        }
+        return
+      }
+    }
+    promise.then(
+      (value) => this.resolve(value),
+      (reason) => this.reject(reason)
+    )
+  }
+}
 
 class AsyncFlow extends Flow {
   constructor (functions, ...args) {
@@ -39,7 +58,7 @@ class AsyncFlow extends Flow {
     if (this.length > 0) {
       let result = this.head(this, ...this.args)
       if (result instanceof Promise) {
-        this[$$bind](result)
+        bindToPromise.call(this, result)
       }
     } else {
       this[$$resolver]()
@@ -91,26 +110,6 @@ class AsyncFlow extends Flow {
       args = this.args
     }
     return new AsyncFlow(this.stack.slice(1), ...args)
-  }
-
-  [$$bind] (promise) {
-    if (this.promise !== promise) {
-      if (promise.hasOwnProperty($$flow)) {
-        let subflow = promise[$$flow]
-        if (subflow.completed) {
-          if (subflow.successful) {
-            this.resolve(subflow.resolved)
-          } else {
-            this.reject(subflow.reason)
-          }
-          return
-        }
-      }
-      promise.then(
-        (value) => this.resolve(value),
-        (reason) => this.reject(reason)
-      )
-    }
   }
 
   get completed () {
