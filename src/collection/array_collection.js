@@ -1,8 +1,12 @@
 'use strict'
 
+const transformWarnMessage = 'The return of a collection transform was not a model instance, so it was discarded. Please only return model instances from collection transforms.'
+
 const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
 const $$key = Symbol('key')
+const $$filters = Symbol('filters')
+const $$transforms = Symbol('transforms')
 
 const EmittingArray = require('../emitting_array')
 const Model = require('../model')
@@ -24,7 +28,9 @@ class ArrayCollection extends EmittingArray {
   constructor (...args) {
     super(...args)
     this[$$key] = Symbol('key')
-    this.$on('adding', event => { this.transformElements(event) })
+    this[$$filters] = []
+    this[$$transforms] = []
+    this.$on('adding', this.transformElements.bind(this))
     this.$on('add', function (elements) {
       let listenerKey = this[$$key]
       for (let element of elements) {
@@ -78,6 +84,10 @@ class ArrayCollection extends EmittingArray {
       if (Model.isInstance(result, element.constructor)) {
         element = result
       }
+      if (!this.$passesFilters(element)) {
+        continue
+      }
+      element = this.$transformElement(element)
       newElements.push(element)
     }
     event.elements = newElements
@@ -173,6 +183,9 @@ class ArrayCollection extends EmittingArray {
         object = object.$clean
       }
       existing.$updateAttributes(object, options)
+      if (!this.$passesFilters(existing)) {
+        this.$remove(existing)
+      }
     } else if (options.upsert === true) {
       this.push(object)
     }
@@ -208,6 +221,59 @@ class ArrayCollection extends EmittingArray {
       return items.indexOf(a) - items.indexOf(b)
     })
     return this
+  }
+
+  $addTransform (fn) {
+    if (this[$$transforms].indexOf(fn) < 0) {
+      this[$$transforms].push(fn)
+    }
+    return this
+  }
+
+  $removeTransform (fn) {
+    let indx = this[$$transforms].indexOf(fn)
+    if (indx >= 0) {
+      this[$$transforms].splice(indx, 1)
+    }
+    return this
+  }
+
+  $transformElement (element) {
+    for (let transform of this[$$transforms]) {
+      let newElement = transform(element)
+      if (Model.isInstance(newElement)) {
+        element = newElement
+      } else {
+        console.warn(transformWarnMessage, newElement, transform)
+      }
+    }
+    return element
+  }
+
+  $addFilter (fn) {
+    if (this[$$filters].indexOf(fn) < 0) {
+      this[$$filters].push(fn)
+    }
+    return this
+  }
+
+  $removeFilter (fn) {
+    let indx = this[$$filters].indexOf(fn)
+    if (indx >= 0) {
+      this[$$filters].splice(indx, 1)
+    }
+    return this
+  }
+
+  $passesFilters (element) {
+    let passed = true
+    for (let filter of this[$$filters]) {
+      if (!filter(element)) {
+        passed = false
+        break
+      }
+    }
+    return passed
   }
 }
 

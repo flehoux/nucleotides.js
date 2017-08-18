@@ -4,6 +4,8 @@ const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
 const $$key = Symbol('key')
 const $$set = Symbol('set')
+const $$filters = Symbol('filters')
+const $$transforms = Symbol('transforms')
 
 const makeEmitter = require('../emitter')
 const Model = require('../model')
@@ -30,13 +32,13 @@ class MapCollection {
     let proxy = new Proxy(coll, {
       set: function (target, property, value, receiver) {
         let event = {
-          elements: [value],
+          elements: {[property]: value},
           reason: null,
           canceled: false
         }
         target.$emit('adding', event)
         if (!event.canceled) {
-          let newValue = event.elements[0]
+          let newValue = event.elements[property]
           let listenerKey = target.$key
           removeValue(target, property)
           target[property] = newValue
@@ -66,9 +68,11 @@ class MapCollection {
   constructor () {
     this[$$key] = Symbol('key')
     this[$$set] = new Set()
+    this[$$filters] = []
+    this[$$transforms] = []
     this.$on('add', item => this[$$set].add(item))
     this.$on('remove', item => this[$$set].delete(item))
-    this.$on('adding', event => { this.transformElements(event) })
+    this.$on('adding', this.transformElements.bind(this))
   }
 
   get [$$map] () {
@@ -97,8 +101,9 @@ class MapCollection {
 
   transformElements (event) {
     let {elements} = event
-    let newElements = []
-    for (let element of elements) {
+    let newElements = {}
+    for (let key of elements) {
+      let element = elements[key]
       if (!(element instanceof this.$model)) {
         element = Reflect.construct(this.$model, [element])
       }
@@ -106,7 +111,20 @@ class MapCollection {
       if (Model.isInstance(result, element.constructor)) {
         element = result
       }
-      newElements.push(element)
+      let shouldAdd = true
+      for (let filter of this[$$filters]) {
+        if (!filter(element)) {
+          shouldAdd = false
+          break
+        }
+      }
+      if (!shouldAdd) {
+        continue
+      }
+      for (let transform of this[$$transforms]) {
+        element = transform(element)
+      }
+      newElements[key] = element
     }
     event.elements = newElements
   }
@@ -160,15 +178,13 @@ class MapCollection {
   }
 
   $put (object) {
-    this.$replace(object)
-    return this
+    return this.$replace(object)
   }
 
   $remove (object) {
-    let existing = this.$get(object)
-    if (existing != null) {
-      let idx = this.indexOf(existing)
-      this.splice(idx, 1)
+    let key = Identifiable.idFor(object)
+    if (key != null) {
+      delete this[key]
     }
     return this
   }
@@ -219,6 +235,36 @@ class MapCollection {
     for (let key of addedKeys) {
       this[key] = items[key]
     }
+  }
+
+  $addTransform (fn) {
+    if (this[$$transforms].indexOf(fn) < 0) {
+      this[$$transforms].push(fn)
+    }
+    return this
+  }
+
+  $removeTransform (fn) {
+    let indx = this[$$transforms].indexOf(fn)
+    if (indx >= 0) {
+      this[$$transforms].splice(indx, 1)
+    }
+    return this
+  }
+
+  $addFilter (fn) {
+    if (this[$$filters].indexOf(fn) < 0) {
+      this[$$filters].push(fn)
+    }
+    return this
+  }
+
+  $removeFilter (fn) {
+    let indx = this[$$filters].indexOf(fn)
+    if (indx >= 0) {
+      this[$$filters].splice(indx, 1)
+    }
+    return this
   }
 }
 
