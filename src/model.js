@@ -37,6 +37,11 @@ function generateModel (name) {
     klass.$emit('creating', this)
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
+    this.$on('willChange', function (diff) {
+      for (let parentKey of this.$parents) {
+        this[$$parents][parentKey].$childWillChange(this, diff)
+      }
+    })
     this.$on('change', function (diff) {
       for (let parentKey of this.$parents) {
         this[$$parents][parentKey].$childDidChange(this, diff)
@@ -328,11 +333,11 @@ function generateModel (name) {
       }
     },
 
-    $childDidChange (child, diff, options) {
+    $childWillChange (child, diff, options) {
       for (const attributeName in klass.attributes()) {
         const attribute = klass.attribute(attributeName)
         if (Model.isModel(attribute.baseType, child) && attribute.constainsModelInstance(this, child)) {
-          this.$didChange({[attribute.name]: diff}, options)
+          this.$willChange({[attribute.name]: diff})
         }
       }
     },
@@ -341,6 +346,15 @@ function generateModel (name) {
       if (this[$$spawning] === true || this[$$updating] === true) return
       this.$emit('willChange', difference)
       klass.$emit('willChange', this, difference)
+    },
+
+    $childDidChange (child, diff, options) {
+      for (const attributeName in klass.attributes()) {
+        const attribute = klass.attribute(attributeName)
+        if (Model.isModel(attribute.baseType, child) && attribute.constainsModelInstance(this, child)) {
+          this.$didChange({[attribute.name]: diff}, options)
+        }
+      }
     },
 
     $didChange (difference, options) {

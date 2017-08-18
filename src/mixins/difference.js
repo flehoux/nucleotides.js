@@ -34,12 +34,15 @@ DifferenceMixin.prototype.createDifference = function (model, object, previousDi
   }
   for (let key in diff) {
     if (previousDifference[key] == null) {
+      previousDifference[key] = {}
+    }
+    if (previousDifference[key]['old'] == null) {
       let attribute = model.attribute(key)
       previousDifference[key] = {}
       if (attribute.collection) {
-        previousDifference[key]['old'] = diff[key].$clean
+        previousDifference[key]['old'] = diff[key]
       } else if (attribute.isModel) {
-        previousDifference[key]['old'] = diff[key].$clean
+        previousDifference[key]['old'] = diff[key]
       } else {
         previousDifference[key]['old'] = diff[key]
       }
