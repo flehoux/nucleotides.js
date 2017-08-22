@@ -250,6 +250,10 @@ class ArrayCollection extends EmittingArray {
     return element
   }
 
+  get $transforms () {
+    return this[$$transforms].slice(0)
+  }
+
   $addFilter (fn) {
     if (this[$$filters].indexOf(fn) < 0) {
       this[$$filters].push(fn)
@@ -263,6 +267,10 @@ class ArrayCollection extends EmittingArray {
       this[$$filters].splice(indx, 1)
     }
     return this
+  }
+
+  get $filters () {
+    return this[$$filters].slice(0)
   }
 
   $passesFilters (element) {
