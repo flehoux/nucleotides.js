@@ -23,7 +23,9 @@ class Attribute {
 
   static generatorForBaseType (attribute, type) {
     let Model = require('./model')
-    if (type === String) {
+    if (type == null) {
+      return value => value
+    } else if (type === String) {
       return (value) => {
         if (value == null) return ''
         return value.toString()
@@ -71,7 +73,7 @@ class Attribute {
   }
 
   static get baseTypes () {
-    return [String, Number, Boolean, Date]
+    return [String, Number, Boolean, Date, null]
   }
 
   static allowsBaseType (type) {
@@ -80,7 +82,7 @@ class Attribute {
   }
 
   static shorthand (name, options) {
-    if (options.hasOwnProperty('type')) {
+    if (options != null && options.hasOwnProperty('type')) {
       let type = options.type
       return new Attribute(name, type, options)
     } else {
@@ -110,18 +112,23 @@ class Attribute {
   }
 
   parseOptions (options) {
-    const {
+    let {
       require = false,
       initial,
-      accept
+      accept,
+      encode
     } = options
+
     Object.defineProperty(this, 'require', {value: require})
     Object.defineProperty(this, 'initial', {value: initial})
     Object.defineProperty(this, 'accept', {value: accept})
+    Object.defineProperty(this, 'encoder', {value: encode})
 
     delete options.require
     delete options.initial
     delete options.accept
+    delete options.encode
+
     Object.defineProperty(this, 'extra', {value: options})
   }
 
@@ -148,7 +155,10 @@ class Attribute {
       }
     }
 
-    if (type.model && typeof type.collection === 'string') {
+    if (type == null) {
+      Object.defineProperty(this, 'collection', {value: false})
+      typeDefinition = null
+    } else if (type.model && typeof type.collection === 'string') {
       Object.defineProperty(this, 'collection', {value: type.collection})
       typeDefinition = type.model
     } else {
@@ -323,6 +333,26 @@ class Attribute {
     } else {
       return parent.$data[this.name] === child
     }
+  }
+
+  encode (value) {
+    if (this.encoder != null) {
+      return this.encoder(value)
+    }
+    if (value == null) {
+      return value
+    }
+    if (this.collection) {
+      if (value.length === 0 && this.extra.emptyAsNull === true) {
+        return null
+      } else {
+        return value.$clean
+      }
+    }
+    if (this.isModel) {
+      return value.$clean
+    }
+    return value
   }
 }
 
