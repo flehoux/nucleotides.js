@@ -136,6 +136,12 @@ function generateModel (name) {
     if (type == null && options == null) {
       return klass[$$attributes][name]
     } else {
+      if (type != null & type.constructor === Object) {
+        type = Object.assign({}, type)
+      }
+      if (options != null) {
+        options = Object.assign({}, options)
+      }
       const newAttribute = new Attribute(name, type, options)
       newAttribute.augmentModel(klass)
       klass[$$attributes][name] = newAttribute
