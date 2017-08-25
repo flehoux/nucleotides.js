@@ -102,7 +102,7 @@ class MapCollection {
   transformElements (event) {
     let {elements} = event
     let newElements = {}
-    for (let key of elements) {
+    for (let key in elements) {
       let element = elements[key]
       if (!(element instanceof this.$model)) {
         element = Reflect.construct(this.$model, [element])
