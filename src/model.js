@@ -202,6 +202,9 @@ function generateModel (name) {
   }
 
   klass.use = function (mixin) {
+    if (mixin == null) {
+      return klass
+    }
     const alreadyMixedIn = klass.mixins.some(function (other) {
       return other.constructor.$$uniqueKey === mixin.constructor.$$uniqueKey
     })
