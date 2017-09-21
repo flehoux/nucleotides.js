@@ -112,6 +112,8 @@ class Attribute {
   }
 
   parseOptions (options) {
+    options = Object.assign({}, options)
+
     let {
       require = false,
       initial,
