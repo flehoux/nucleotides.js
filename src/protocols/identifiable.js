@@ -55,6 +55,9 @@ Object.assign(Identifiable, {
       if (method !== 'POST') {
         components.push(Identifiable.idFor(object))
       }
+      if (method === 'POST' && object.id != null) {
+        components.push(Identifiable.idFor(object))
+      }
       return components.join('/')
     } else {
       let model = object
