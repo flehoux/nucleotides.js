@@ -302,7 +302,12 @@ function generateProtocol (name) {
   }
 
   protocol.supportedBy = function (model) {
-    return model[$$protocols][protocol.$$key] != null
+    const Model = require('./model')
+    if (Model.isModel(model)) {
+      return model[$$protocols][protocol.$$key] != null
+    } else if (Model.isInstance(model)) {
+      return model.constructor[$$protocols][protocol.$$key] != null
+    }
   }
 
   protocol.augmentModelWithValue = function (model, item, value) {
