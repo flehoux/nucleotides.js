@@ -162,7 +162,7 @@ function generateMixin (name) {
         priority = 500
       }
       let newFn = function (...args) {
-        return fn.call(this, mixin, ...args)
+        return fn.apply(this, [mixin, ...args])
       }
       newFn[Symbol.for('mixin')] = mixin
       model.implement(item, priority, newFn)
