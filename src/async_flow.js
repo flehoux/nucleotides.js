@@ -31,11 +31,13 @@ function isPromiseLike (arg) {
   return ['then', 'catch'].every((name) => typeof arg[name] === 'function')
 }
 
+const {createPromise, resolvePromise} = require('..')
+
 class AsyncFlow extends Flow {
   constructor (functions, ...args) {
     super(functions, ...args)
     this.result = null
-    this.promise = new Promise((resolve, reject) => {
+    this.promise = createPromise((resolve, reject) => {
       this[$$resolver] = resolve
       this[$$rejector] = reject
     })
@@ -75,7 +77,7 @@ class AsyncFlow extends Flow {
 
   continue (...args) {
     if (this.last) {
-      return Promise.resolve(null)
+      return resolvePromise(null)
     } else {
       let flow = this.nextFlow(args)
       flow.run()
@@ -85,7 +87,7 @@ class AsyncFlow extends Flow {
 
   continueAsync (...args) {
     let flow = this
-    return new Promise(function (resolve) {
+    return createPromise(function (resolve) {
       setTimeout(function () {
         resolve(flow.continue(...args))
       })
@@ -100,7 +102,7 @@ class AsyncFlow extends Flow {
   }
 
   resolveAsync (value) {
-    return new Promise(function (resolve) {
+    return createPromise(function (resolve) {
       setTimeout(function () {
         resolve(value)
       })

@@ -3,6 +3,7 @@ const Identifiable = require('./identifiable')
 const Storable = require('./storable')
 const CollectablePromise = require('../collectable_promise')
 const $$isNew = Symbol('isNew')
+const {rejectPromise, resolvePromise} = require('../..')
 
 function ensureInstance (response, model) {
   if (response == null) {
@@ -67,9 +68,9 @@ function doFindOne (...args) {
     try {
       result = ensureInstance(flow.resolved, this)
     } catch (err) {
-      return Promise.reject(err)
+      return rejectPromise(err)
     }
-    promise = Promise.resolve(result)
+    promise = resolvePromise(result)
     promise.$result = result
     return promise
   } else {

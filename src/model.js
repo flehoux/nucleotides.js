@@ -114,14 +114,15 @@ function generateModel (name) {
 
     if (typeof elements === 'function') {
       const CollectablePromise = require('./collectable_promise')
+      const {resolvePromise, allPromise} = require('..')
       let getter = elements
       let result = getter()
       if (result != null && typeof result.then === 'function') {
         return new CollectablePromise(type, result, this)
       } else if (typeof result.length === 'number' && result[0] && typeof result[0].then === 'function') {
-        return new CollectablePromise(type, Promise.all(result), this)
+        return new CollectablePromise(type, allPromise(result), this)
       } else {
-        return new CollectablePromise(type, Promise.resolve(result), this)
+        return new CollectablePromise(type, resolvePromise(result), this)
       }
     } else if (type === 'array') {
       return require('./collection').ArrayCollection.create(this, ...elements)
