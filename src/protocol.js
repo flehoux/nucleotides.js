@@ -185,23 +185,22 @@ function generateProtocol (name) {
     if (!protocol[$$methods].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define method ${name}`, name)
     }
+    let impls
+    let model
     if (Model.isModel(object)) {
-      return object[protocol[name].symbol]
+      model = object
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[name].symbol]
+      model = object.constructor
     }
+    impls = model[protocol[name].symbol]
+    if (impls == null || impls.length === 0) {
+      throw new ProtocolError(`Model ${model.name} does not implement method ${name} of protocol ${protocol.name}`, name)
+    }
+    return impls
   }
 
   protocol.implementationFor = function (object, name) {
-    const Model = require('./model')
-    if (!protocol[$$methods].has(name)) {
-      throw new ProtocolError(`Protocol ${protocol.name} does not define method ${name}`, name)
-    }
-    if (Model.isModel(object)) {
-      return object[protocol[name].symbol][0]
-    } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[name].symbol][0]
-    }
+    return this.implementationsFor(object, name)[0]
   }
 
   protocol.implementationForMixin = function (target, mixin, name) {
