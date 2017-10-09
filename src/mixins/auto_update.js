@@ -7,7 +7,7 @@ const $$eventKey = 'autoUpdate'
 
 function autoUpdateObject (mixin, conditional) {
   if (this[$$autoUpdating] != null) {
-    this.$model.$off($$eventKey, this[$$autoUpdating])
+    this.constructor.$off($$eventKey, this[$$autoUpdating])
   }
   let listen
   let self = this
