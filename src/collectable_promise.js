@@ -1,5 +1,5 @@
 const {ArrayCollection, MapCollection} = require('./collection')
-const {allPromise} = require('../..')
+const {allPromise} = require('..')
 
 class CollectablePromise {
   constructor (type, promise, model) {
