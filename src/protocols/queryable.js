@@ -83,7 +83,7 @@ function doFindMany (...args) {
   let flow = promise.$flow
   if (flow.successful) {
     let result = ensureListOfInstance(flow.resolved, this)
-    promise = Promise.resolve(result)
+    promise = resolvePromise(result)
     promise.$result = result
   } else {
     promise = promise.then((response) => {

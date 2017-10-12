@@ -1,4 +1,5 @@
 const {ArrayCollection, MapCollection} = require('./collection')
+const {allPromise} = require('../..')
 
 class CollectablePromise {
   constructor (type, promise, model) {
@@ -79,7 +80,7 @@ class CollectablePromise {
   ensure (...names) {
     return this.wrap(this.promise.then((items) => {
       let promises = items.map((item) => item.$ensure(...names))
-      return Promise.all(promises).then(() => items)
+      return allPromise(promises).then(() => items)
     }))
   }
 

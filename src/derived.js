@@ -166,6 +166,10 @@ class AsyncDerivedValue extends CachedDerivedValue {
     }
   }
 
+  fetched (object) {
+    return object[this.$$cache] != null
+  }
+
   ensure (object) {
     let derived = this
     if (object.hasOwnProperty(derived.$$promise)) {

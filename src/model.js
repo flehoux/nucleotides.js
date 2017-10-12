@@ -293,9 +293,16 @@ function generateModel (name) {
         if (derived == null || !(derived instanceof DerivedValue.Async)) {
           throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
         }
-        promises.push(derived.ensure(this))
+        if (!derived.fetched(this)) {
+          promises.push(derived.ensure(this))
+        }
       }
-      return Promise.all(promises).then(() => this)
+      const {allPromise, resolvePromise} = require('..')
+      if (promises.length > 0) {
+        return allPromise(promises).then(() => this)
+      } else {
+        return resolvePromise(this)
+      }
     },
 
     $clone () {
