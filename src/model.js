@@ -305,8 +305,12 @@ function generateModel (name) {
       }
     },
 
-    $clone () {
-      return Reflect.construct(klass, [this.$clean])
+    $clone (isNew = false) {
+      let obj = Reflect.construct(klass, [this.$clean])
+      if ('$isNew' in obj) {
+        obj.$isNew = isNew
+      }
+      return obj
     },
 
     $setTracker (name, symbol) {
