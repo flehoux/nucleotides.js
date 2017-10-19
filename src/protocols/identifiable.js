@@ -53,10 +53,10 @@ Object.assign(Identifiable, {
         components.unshift(object.$parentUrl)
       }
       if (method !== 'POST') {
-        components.push(Identifiable.idFor(object))
+        components.push(encodeURIComponent(Identifiable.idFor(object)))
       }
       if (method === 'POST' && object.id != null) {
-        components.push(Identifiable.idFor(object))
+        components.push(encodeURIComponent(Identifiable.idFor(object)))
       }
       return components.join('/')
     } else {
