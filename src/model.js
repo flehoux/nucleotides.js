@@ -305,6 +305,22 @@ function generateModel (name) {
       }
     },
 
+    $force (name, value) {
+      const derived = klass[$$derived][name]
+      if (derived == null || !(derived instanceof DerivedValue.Async)) {
+        throw new Error(`$force was called for a property that wasn't an async derived value: ${name}`)
+      }
+      derived.force(this, value)
+    },
+
+    $invalidate (name) {
+      const derived = klass[$$derived][name]
+      if (derived == null || !(derived instanceof DerivedValue.Async)) {
+        throw new Error(`$force was called for a property that wasn't an async derived value: ${name}`)
+      }
+      derived.clearCache(this)
+    },
+
     $clone (isNew = false) {
       let obj = Reflect.construct(klass, [this.$clean])
       if ('$isNew' in obj) {

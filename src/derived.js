@@ -188,6 +188,13 @@ class AsyncDerivedValue extends CachedDerivedValue {
       throw new DerivedDefinitionException('unacceptable', 'Getter function did not return a Promise instance', result)
     }
   }
+
+  force (object, value) {
+    object[this.$$promise] = Promise.resolve(value)
+    object[this.$$cache] = value
+    object.$emit('resolved', this.name, value)
+    object.constructor.$emit('resolved', object, this.name, value)
+  }
 }
 
 DerivedValue.Cached = CachedDerivedValue
