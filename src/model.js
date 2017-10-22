@@ -9,8 +9,9 @@ const $$isModel = Symbol('isModel')
 const $$parents = Symbol('parents')
 const $$referenceTracker = Symbol('referenceTracker')
 const $$protocols = Symbol.for('protocols')
-const $$spawning = Symbol('spawning')
+const $$initializing = Symbol('initializing')
 const $$updating = Symbol('updating')
+const $$lazyData = Symbol('lazyData')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -33,7 +34,7 @@ function generateModel (name) {
     this[$$data] = {}
     this[$$parents] = {}
     this[$$referenceTracker] = {}
-    this[$$spawning] = true
+    this[$$initializing] = true
     klass.$emit('creating', this)
     klass[$$constructor].apply(this, args)
     klass.$emit('new', this)
@@ -42,7 +43,7 @@ function generateModel (name) {
         this[$$parents][parentKey].$childDidChange(this, diff)
       }
     })
-    delete this[$$spawning]
+    delete this[$$initializing]
   })
 
   klass[$$attributes] = {}
@@ -70,13 +71,21 @@ function generateModel (name) {
 
   Object.defineProperties(klass.prototype, {
     $data: {
-      get: function () {
+      get () {
         return this[$$data]
       }
     },
     $parents: {
-      get: function () {
+      get () {
         return Object.getOwnPropertySymbols(this[$$parents])
+      }
+    },
+    $lazyData: {
+      get () {
+        if (this[$$lazyData] == null) {
+          this[$$lazyData] = {}
+        }
+        return this[$$lazyData]
       }
     }
   })
@@ -90,7 +99,7 @@ function generateModel (name) {
     for (let attributeName in klass[$$attributes]) {
       const attribute = klass[$$attributes][attributeName]
       if (data[attributeName] != null) {
-        attribute.updateInTarget(this, data[attributeName])
+        attribute.maybeUpdateInTarget(this, data[attributeName])
       }
     }
   }
@@ -143,7 +152,7 @@ function generateModel (name) {
       if (options != null) {
         options = Object.assign({}, options)
       }
-      const newAttribute = new Attribute(name, type, options)
+      const newAttribute = Attribute.create(name, type, options)
       newAttribute.augmentModel(klass)
       klass[$$attributes][name] = newAttribute
       return klass
@@ -257,9 +266,8 @@ function generateModel (name) {
 
   klass.derive('$clean', {cache: true}, function () {
     const data = {}
-    for (const key in this.$data) {
-      const value = this.$data[key]
-      data[key] = this.constructor.attribute(key).encode(value)
+    for (let attributeName in klass[$$attributes]) {
+      data[attributeName] = klass[$$attributes][attributeName].getEncodedValue(this)
     }
     return data
   })
@@ -274,7 +282,7 @@ function generateModel (name) {
       for (const attributeName in data) {
         if (attributeName in klass.attributes()) {
           const attribute = klass.attribute(attributeName)
-          if (attribute.updateInTarget(this, data[attributeName])) {
+          if (attribute.maybeUpdateInTarget(this, data[attributeName])) {
             difference[attributeName] = this[attributeName]
           }
         }
@@ -284,6 +292,12 @@ function generateModel (name) {
         this.$didChange(difference, options)
       }
       return this
+    },
+
+    $whileInitializing (cb) {
+      this[$$initializing] = true
+      cb()
+      delete this[$$initializing]
     },
 
     $ensure (...names) {
@@ -370,7 +384,7 @@ function generateModel (name) {
     },
 
     $didChange (difference, options) {
-      if (this[$$spawning] === true || this[$$updating] === true) return
+      if (this[$$initializing] === true || this[$$updating] === true) return
       this.$emit('change', difference, options)
       klass.$emit('change', this, difference, options)
     }

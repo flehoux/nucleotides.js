@@ -19,25 +19,16 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     return this[$$difference]
   })
 
-DifferenceMixin.prototype.mergeDifference = function (model, object, previousDifference, diff, options) {
+DifferenceMixin.prototype.mergeDifference = function (model, object, difference, delta, options) {
   let excluded = this.excluded
   if (options != null && options.broadcasted === true) {
     return
   }
   for (let attrName of excluded) {
-    delete diff[attrName]
+    delete delta[attrName]
   }
-  for (let key in diff) {
-    let attribute = model.attribute(key)
-    if (attribute.collection) {
-      previousDifference[key] = object[key].$clean
-    } else {
-      if (attribute.isModel) {
-        previousDifference[key] = object[key].$clean
-      } else {
-        previousDifference[key] = diff[key]
-      }
-    }
+  for (let key in delta) {
+    difference[key] = model.attribute(key).getEncodedValue(object)
   }
 }
 

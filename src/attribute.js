@@ -6,6 +6,51 @@ const $$generator = Symbol('generator')
 const Identifiable = require('./protocols/identifiable')
 const EmittingArray = require('./emitting_array')
 
+const GENERATORS = {
+  identity (value) { return value },
+  string (value) {
+    if (value == null) return ''
+    return value.toString()
+  },
+  number (value) {
+    if (typeof value === 'number') {
+      return value
+    } else if (typeof value === 'string') {
+      return parseFloat(value)
+    }
+  },
+  boolean (value) {
+    return !!value
+  },
+  object (value) {
+    return Object.assign({}, value)
+  },
+  date (value) {
+    if (value instanceof Date) {
+      return value
+    } else if (typeof value === 'string' || typeof value === 'number') {
+      return new Date(value)
+    } else if (typeof value === 'object') {
+      const { year, month, date, hours, minutes, seconds, milliseconds } = value
+      if (value.utc === true) {
+        return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds))
+      } else {
+        return new Date(year, month, date, hours, minutes, seconds, milliseconds)
+      }
+    }
+  },
+  model (type) {
+    const Model = require('./model')
+    return function (value) {
+      if (Model.isInstance(value, type)) {
+        return value
+      } else {
+        return Reflect.construct(type, [value])
+      }
+    }
+  }
+}
+
 class AttributeDefinitionException extends Error {
   constructor (code, message, value) {
     super(message)
@@ -15,56 +60,81 @@ class AttributeDefinitionException extends Error {
 }
 
 class Attribute {
-  constructor (name, type, options = {}) {
-    this.name = name
-    this.parseType(type)
-    this.parseOptions(options)
+  static create (name, type, options) {
+    let typeDefinition = this.parseType(type)
+    if (typeDefinition.model) {
+      return Reflect.construct(NestedModelAttribute, [name, typeDefinition, options])
+    } else {
+      return Reflect.construct(this, [name, typeDefinition, options])
+    }
   }
 
-  static generatorForBaseType (attribute, type) {
+  static shorthand (name, options) {
+    if (options != null && options.hasOwnProperty('type')) {
+      let type = options.type
+      return Attribute.create(name, type, options)
+    } else {
+      return Attribute.create(name, options)
+    }
+  }
+
+  static parseType (type) {
+    const Model = require('./model')
+    let options = {collection: false}
+
+    if (type instanceof Array) {
+      if (type.length === 1) {
+        if (Model.isModel(type[0])) {
+          const {model, collection} = type[0].List
+          Object.assign(options, {
+            base: model,
+            collection
+          })
+        } else {
+          Object.assign(options, {
+            collection: 'array',
+            base: type[0]
+          })
+        }
+      } else {
+        throw new AttributeDefinitionException(
+          'type',
+          `Type for attribute ${this.name} can't be an array with multiple values`,
+          type
+        )
+      }
+    } else if (typeof type === 'function') {
+      options.base = type
+    } else if (type) {
+      Object.assign(options, {
+        generator: type.generator,
+        base: type.base || type.model,
+        collection: type.collection || false
+      })
+    }
+
+    options.model = Model.isModel(options.base)
+    options.generator = options.generator || this.generatorForBaseType(options.base)
+
+    return options
+  }
+
+  static generatorForBaseType (type) {
     let Model = require('./model')
     if (type == null) {
-      return value => value
+      return GENERATORS.identity
     } else if (type === String) {
-      return (value) => {
-        if (value == null) return ''
-        return value.toString()
-      }
+      return GENERATORS.string
     } else if (type === Number) {
-      return (value) => {
-        if (typeof value === 'number') {
-          return value
-        } else if (typeof value === 'string') {
-          return parseFloat(value)
-        }
-      }
+      return GENERATORS.number
     } else if (type === Boolean) {
-      return (value) => !!value
+      return GENERATORS.boolean
+    } else if (type === Object) {
+      return GENERATORS.object
     } else if (type === Date) {
-      return function (value) {
-        if (value instanceof Date) {
-          return value
-        } else if (typeof value === 'string' || typeof value === 'number') {
-          return new Date(value)
-        } else if (typeof value === 'object') {
-          const { year, month, date, hours, minutes, seconds, milliseconds } = value
-          if (value.utc === true) {
-            return new Date(Date.UTC(year, month, date, hours, minutes, seconds, milliseconds))
-          } else {
-            return new Date(year, month, date, hours, minutes, seconds, milliseconds)
-          }
-        }
-      }
+      return GENERATORS.date
     } else if (Model.isModel(type)) {
-      return function (...args) {
-        if (Model.isInstance(args[0], type)) {
-          return args[0]
-        } else {
-          return Reflect.construct(type, args)
-        }
-      }
-    } else {
-      throw new AttributeDefinitionException('type', `Attribute ${attribute.name} is being defined without a proper type`, type)
+      return GENERATORS.model(type)
     }
   }
 
@@ -73,7 +143,7 @@ class Attribute {
   }
 
   static get baseTypes () {
-    return [String, Number, Boolean, Date, null]
+    return [String, Number, Boolean, Date, Object, null]
   }
 
   static allowsBaseType (type) {
@@ -81,13 +151,11 @@ class Attribute {
     return this.baseTypes.indexOf(type) >= 0 || Model.isModel(type)
   }
 
-  static shorthand (name, options) {
-    if (options != null && options.hasOwnProperty('type')) {
-      let type = options.type
-      return new Attribute(name, type, options)
-    } else {
-      return new Attribute(name, options)
-    }
+  constructor (name, type, options = {}) {
+    this.$$key = Symbol(`attributes:${name}`)
+    this.name = name
+    this.setType(type)
+    this.parseOptions(options)
   }
 
   set baseType (typeClass) {
@@ -100,11 +168,6 @@ class Attribute {
 
   get baseType () {
     return this[$$type]
-  }
-
-  get isModel () {
-    let Model = require('./model')
-    return Model.isModel(this.baseType)
   }
 
   get generator () {
@@ -134,167 +197,118 @@ class Attribute {
     Object.defineProperty(this, 'extra', {value: options})
   }
 
-  parseType (type) {
-    let typeDefinition
-    const Model = require('./model')
-
-    if (type instanceof Array) {
-      if (type.length === 1) {
-        if (Model.isModel(type)) {
-          type = type[0].List
-        } else {
-          type = {
-            collection: 'array',
-            model: type[0]
-          }
-        }
-      } else {
-        throw new AttributeDefinitionException(
-          'type',
-          `Type for attribute ${this.name} can't be an array with multiple values`,
-          type
-        )
-      }
-    }
-
-    if (type == null) {
-      Object.defineProperty(this, 'collection', {value: false})
-      typeDefinition = null
-    } else if (type.model && typeof type.collection === 'string') {
-      Object.defineProperty(this, 'collection', {value: type.collection})
-      typeDefinition = type.model
-    } else {
-      Object.defineProperty(this, 'collection', {value: false})
-      typeDefinition = type
-    }
-
-    if (Attribute.allowsBaseType(typeDefinition)) {
-      this.baseType = typeDefinition
-      this[$$generator] = Attribute.generatorForBaseType(this, typeDefinition)
-    } else if (Attribute.allowsBaseType(typeDefinition.base)) {
-      this.baseType = typeDefinition.base
-      if (typeof typeDefinition.generator === 'function') {
-        this[$$generator] = typeDefinition.generator
-      } else {
-        this[$$generator] = Attribute.generatorForBaseType(this, typeDefinition)
-      }
-    }
+  setType (typeDefinition) {
+    const {base: type, collection, generator} = typeDefinition
+    Object.defineProperties(this, {
+      collection: {value: collection},
+      baseType: {value: type}
+    })
+    this[$$generator] = generator
   }
 
   augmentModel (klass) {
     const attribute = this
-    const Searchable = require('./protocols/searchable')
     klass.$on('creating', function (object) {
-      Object.defineProperty(object, attribute.name, {
-        enumerable: true,
-        set: function (value) {
-          if (attribute.updateInTarget(this, value) && !this.collection) {
-            this.$didChange({[attribute.name]: this[attribute.name]})
-          }
-        },
-        get: function () {
-          return this.$data[attribute.name]
-        }
-      })
-      object.$setTracker(attribute.name, Symbol(`attributes:${attribute.name}`))
-      attribute.initializeInTarget(object)
+      attribute.attachToTarget(object)
     })
     if (attribute.extra.searchable === true) {
-      klass.set(Searchable.field, {
+      klass.set(require('./protocols/searchable').field, {
         key: attribute.name,
         unique: attribute.extra.unique === true
       })
     }
   }
 
-  initializeInTarget (object) {
+  attachToTarget (target) {
+    let attribute = this
+    target.$lazyData[this.$$key] = {}
+    Object.defineProperty(target, this.name, {
+      enumerable: true,
+      set: function (value) {
+        if (this.$lazyData[attribute.$$key]) {
+          attribute.initializeInTarget(this)
+        }
+        attribute.updateValue(this, value)
+      },
+      get: function () {
+        if (target.$lazyData[attribute.$$key]) {
+          attribute.initializeInTarget(this)
+        }
+        return attribute.getValue(this)
+      }
+    })
+  }
+
+  initializeInTarget (target) {
     let value
+    let lazy = target.$lazyData[this.$$key]
     if (typeof this.initial === 'function') {
       value = this.initial()
     } else if (this.initial != null) {
       value = this.initial
     }
-    if (this.collection !== false) {
-      this.initializeCollectionInTarget(object, value)
-    } else if (value != null) {
-      this.updateInTarget(object, value)
-    }
+    delete target.$lazyData[this.$$key]
+    target.$whileInitializing(() => {
+      if (this.collection !== false) {
+        this.initializeCollectionInTarget(target, value)
+      } else if (value != null) {
+        this.maybeUpdateInTarget(target, value)
+      }
+      if (lazy.value != null) {
+        this.maybeUpdateInTarget(target, lazy.value)
+      }
+    })
   }
 
-  initializeCollectionInTarget (object, value) {
-    let collection
+  createCollection () {
     let attribute = this
-
-    if (this.isModel) {
-      collection = this.baseType.createCollection(this.collection)
-    } else {
-      collection = EmittingArray.create()
-      collection.$on('adding', function (event) {
-        let {elements} = event
-        event.elements = elements.map(function (element) {
-          if (element != null) {
-            return attribute.generator(element)
-          }
-        })
-      })
-    }
-
-    object.$data[this.name] = collection
-    if (this.isModel) {
-      collection.$on('add', function (elements) {
-        if (attribute.collection === 'array') {
-          for (let item of elements) {
-            item.$addParent(object, object.$tracker(attribute.name))
-          }
-        } else if (attribute.collection === 'map') {
-          for (let key in elements) {
-            elements[key].$addParent(object, object.$tracker(attribute.name))
-          }
+    let collection = EmittingArray.create()
+    collection.$on('adding', function (event) {
+      let {elements} = event
+      event.elements = elements.map(function (element) {
+        if (element != null) {
+          return attribute.generator(element)
         }
       })
-      collection.$on('remove', function (elements) {
-        if (attribute.collection === 'array') {
-          for (let item of elements) {
-            item.$removeParent(object, object.$tracker(attribute.name))
-          }
-        } else if (attribute.collection === 'map') {
-          for (let key in elements) {
-            elements[key].$addParent(object, object.$tracker(attribute.name))
-          }
-        }
-      })
-    }
+    })
+    return collection
+  }
 
-    this.updateInTarget(object, value)
+  setupCollectionWatcher (collection, target) {
+    let attribute = this
     let listener = function (operation, items) {
-      object.$didChange({[attribute.name]: {[operation]: items}})
+      target.$didChange({[attribute.name]: {[operation]: items}})
     }
     collection.$on('add', listener.bind(collection, 'added'))
     collection.$on('remove', listener.bind(collection, 'removed'))
   }
 
-  updateInTarget (object, value) {
+  initializeCollectionInTarget (target, value) {
+    let collection
+
+    collection = this.createCollection()
+    target.$data[this.name] = collection
+
+    this.maybeUpdateInTarget(target, value)
+    this.setupCollectionWatcher(collection, target)
+  }
+
+  maybeUpdateInTarget (target, value) {
+    if (target.$lazyData[this.$$key]) {
+      target.$lazyData[this.$$key].value = value
+      return false
+    }
     if (this.collection === 'array') {
-      this.updateArrayInTarget(object, value)
+      this.updateArrayInTarget(target, value)
       return false
     } else if (this.collection === 'map') {
-      this.updateMapInTarget(object, value)
+      this.updateMapInTarget(target, value)
       return false
     } else {
       let nextValue = this.generator(value)
-      if (object.$data[this.name] !== nextValue) {
-        let oldValue = object.$data[this.name]
-        if (this.isModel && Identifiable.isEqual(oldValue, nextValue)) {
-          oldValue.$updateAttributes(nextValue.$clean)
-        } else {
-          if (this.isModel && oldValue != null) {
-            oldValue.$removeParent(object, object.$tracker(this.name))
-          }
-          object.$data[this.name] = nextValue
-          if (this.isModel && nextValue != null) {
-            nextValue.$addParent(object, object.$tracker(this.name))
-          }
-        }
+      let oldValue = target.$data[this.name]
+      if (oldValue !== nextValue) {
+        this.updateInTarget(target, oldValue, nextValue)
         return true
       } else {
         return false
@@ -302,8 +316,12 @@ class Attribute {
     }
   }
 
-  updateArrayInTarget (object, value) {
-    let currentItems = object.$data[this.name]
+  updateInTarget (target, oldValue, nextValue) {
+    target.$data[this.name] = nextValue
+  }
+
+  updateArrayInTarget (target, value) {
+    let currentItems = target.$data[this.name]
     let newItems
     if (value != null) {
       if (typeof value[Symbol.iterator] === 'function') {
@@ -317,13 +335,13 @@ class Attribute {
     currentItems.$updateAll(newItems)
   }
 
-  updateMapInTarget (object, value) {
-    object.$data[this.name].$updateAll(value || {})
+  updateMapInTarget (target, value) {
+    target.$data[this.name].$updateAll(value || {})
   }
 
   constainsModelInstance (parent, child) {
     if (this.collection === 'array') {
-      return parent.$data[this.name].includes(child)
+      return parent[this.name].includes(child)
     } else if (this.collection === 'map') {
       let coll = parent.$data[this.name]
       for (let key of Object.keys(coll)) {
@@ -351,10 +369,86 @@ class Attribute {
         return value.$clean
       }
     }
-    if (this.isModel) {
+    return value
+  }
+
+  getEncodedValue (target) {
+    if (target.$lazyData[this.$$key]) {
+      return target.$lazyData[this.$$key].value
+    }
+    return this.encode(this.getValue(target))
+  }
+
+  getValue (target) {
+    return target.$data[this.name]
+  }
+
+  updateValue (target, value) {
+    if (this.maybeUpdateInTarget(target, value) && !target.collection) {
+      target.$didChange({[this.name]: target[this.name]})
+    }
+  }
+}
+
+class NestedModelAttribute extends Attribute {
+  createCollection () {
+    return this.baseType.createCollection(this.collection)
+  }
+
+  attachToTarget (object) {
+    super.attachToTarget(object)
+    object.$setTracker(this.name, this.$$key)
+  }
+
+  setupCollectionWatcher (collection, object) {
+    let attribute = this
+    collection.$on('add', function (elements) {
+      if (attribute.collection === 'array') {
+        for (let item of elements) {
+          item.$addParent(object, object.$tracker(attribute.name))
+        }
+      } else if (attribute.collection === 'map') {
+        for (let key in elements) {
+          elements[key].$addParent(object, object.$tracker(attribute.name))
+        }
+      }
+    })
+    collection.$on('remove', function (elements) {
+      if (attribute.collection === 'array') {
+        for (let item of elements) {
+          item.$removeParent(object, object.$tracker(attribute.name))
+        }
+      } else if (attribute.collection === 'map') {
+        for (let key in elements) {
+          elements[key].$addParent(object, object.$tracker(attribute.name))
+        }
+      }
+    })
+    return super.setupCollectionWatcher(collection, object)
+  }
+
+  encode (value) {
+    if (this.encoder != null) {
+      return this.encoder(value)
+    } else if (value == null) {
+      return value
+    } else {
       return value.$clean
     }
-    return value
+  }
+
+  updateInTarget (object, oldValue, nextValue) {
+    if (Identifiable.isEqual(oldValue, nextValue)) {
+      oldValue.$updateAttributes(nextValue.$clean)
+    } else {
+      if (oldValue != null) {
+        oldValue.$removeParent(object, object.$tracker(this.name))
+      }
+      super.updateInTarget(object, oldValue, nextValue)
+      if (nextValue != null) {
+        nextValue.$addParent(object, object.$tracker(this.name))
+      }
+    }
   }
 }
 

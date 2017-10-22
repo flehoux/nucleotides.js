@@ -27,7 +27,7 @@ class ArrayCollection extends EmittingArray {
 
   constructor (...args) {
     super(...args)
-    this[$$key] = Symbol('key')
+    this[$$key] = Symbol('listenKey')
     this[$$filters] = []
     this[$$transforms] = []
     this.$on('adding', this.transformElements.bind(this))
