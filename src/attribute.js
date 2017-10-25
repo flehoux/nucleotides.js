@@ -293,22 +293,22 @@ class Attribute {
     this.setupCollectionWatcher(collection, target)
   }
 
-  maybeUpdateInTarget (target, value) {
+  maybeUpdateInTarget (target, value, options) {
     if (target.$lazyData[this.$$key]) {
       target.$lazyData[this.$$key].value = value
       return false
     }
     if (this.collection === 'array') {
-      this.updateArrayInTarget(target, value)
+      this.updateArrayInTarget(target, value, options)
       return false
     } else if (this.collection === 'map') {
-      this.updateMapInTarget(target, value)
+      this.updateMapInTarget(target, value, options)
       return false
     } else {
       let nextValue = this.generator(value)
       let oldValue = target.$data[this.name]
       if (oldValue !== nextValue) {
-        this.updateInTarget(target, oldValue, nextValue)
+        this.updateInTarget(target, oldValue, nextValue, options)
         return true
       } else {
         return false
@@ -320,7 +320,7 @@ class Attribute {
     target.$data[this.name] = nextValue
   }
 
-  updateArrayInTarget (target, value) {
+  updateArrayInTarget (target, value, options) {
     let currentItems = target.$data[this.name]
     let newItems
     if (value != null) {
@@ -332,11 +332,11 @@ class Attribute {
     } else {
       newItems = []
     }
-    currentItems.$updateAll(newItems)
+    currentItems.$updateAll(newItems, options)
   }
 
-  updateMapInTarget (target, value) {
-    target.$data[this.name].$updateAll(value || {})
+  updateMapInTarget (target, value, options) {
+    target.$data[this.name].$updateAll(value || {}, options)
   }
 
   constainsModelInstance (parent, child) {
@@ -437,9 +437,9 @@ class NestedModelAttribute extends Attribute {
     }
   }
 
-  updateInTarget (object, oldValue, nextValue) {
+  updateInTarget (object, oldValue, nextValue, options) {
     if (Identifiable.isEqual(oldValue, nextValue)) {
-      oldValue.$updateAttributes(nextValue.$clean)
+      oldValue.$updateAttributes(nextValue.$clean, options)
     } else {
       if (oldValue != null) {
         oldValue.$removeParent(object, object.$tracker(this.name))

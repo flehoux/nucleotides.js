@@ -282,7 +282,7 @@ function generateModel (name) {
       for (const attributeName in data) {
         if (attributeName in klass.attributes()) {
           const attribute = klass.attribute(attributeName)
-          if (attribute.maybeUpdateInTarget(this, data[attributeName])) {
+          if (attribute.maybeUpdateInTarget(this, data[attributeName], options)) {
             difference[attributeName] = this[attributeName]
           }
         }
