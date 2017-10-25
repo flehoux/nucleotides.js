@@ -193,6 +193,12 @@ class ArrayCollection extends EmittingArray {
   }
 
   $updateAll (items, options) {
+    if (items.length === 0) {
+      if (this.length > 0) {
+        this.splice(0, this.length)
+      }
+      return this
+    }
     let currentItems = this.slice(0)
     let newItems = []
     for (let item of items) {
@@ -213,10 +219,14 @@ class ArrayCollection extends EmittingArray {
     for (let item of this) {
       let idx = items.indexOf(item)
       if (idx === -1) {
-        this.splice(idx, 1)
+        this.splice(this.indexOf(item), 1)
       }
     }
     this.push(...newItems)
+    let transformedNewItems = this.slice(-1 * newItems.length)
+    for (let i = 0; i < newItems.length; i++) {
+      items.splice(items.indexOf(newItems[i]), 1, transformedNewItems[i])
+    }
     this.sort(function (a, b) {
       return items.indexOf(a) - items.indexOf(b)
     })
