@@ -6,9 +6,11 @@ const $$autoUpdating = Symbol('autoUpdating')
 const $$eventKey = 'autoUpdate'
 
 function autoUpdateObject (mixin, conditional) {
+  let eventKey = mixin.eventKey(this)
   if (this[$$autoUpdating] != null) {
-    this.constructor.$off($$eventKey, this[$$autoUpdating])
+    this.constructor.$off(eventKey, this[$$autoUpdating])
   }
+
   let listen
   let self = this
   if (typeof conditional === 'function') {
@@ -36,7 +38,6 @@ function autoUpdateObject (mixin, conditional) {
       self.$updateAttributes(committed.$clean, {broadcasted: true})
     }
   }
-  let eventKey = mixin.eventKey(this)
   this.constructor.$on(eventKey, listen)
   this[$$autoUpdating] = listen
   return () => {
