@@ -23,6 +23,8 @@ function debounce (fn, args, ctx) {
   })
 };
 
+function noop () {}
+
 module.exports = function makeEmitter (thing, options) {
   var opts = options || {}
   const $$listeners = Symbol('listeners')
@@ -64,11 +66,14 @@ module.exports = function makeEmitter (thing, options) {
     }
     return thing
   }
-  thing.$emit = function (...args) {
-    return this.$emitterSnapshot(args.shift()).apply(this, args)
+  thing.$emit = function (name, ...args) {
+    return this.$emitterSnapshot(name).apply(this, args)
   }
   thing.$emitterSnapshot = function (type) {
     var et = (this.$listeners[type] || []).slice(0)
+    if (et.length === 0) {
+      return noop
+    }
     return function (...args) {
       var ctx = this
       if (type === 'error' && opts.throws !== false && !et.length) { throw args.length === 1 ? args[0] : args }
