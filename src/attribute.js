@@ -184,17 +184,44 @@ class Attribute {
       encode
     } = options
 
-    Object.defineProperty(this, 'require', {value: require})
-    Object.defineProperty(this, 'initial', {value: initial})
-    Object.defineProperty(this, 'accept', {value: accept})
-    Object.defineProperty(this, 'encoder', {value: encode})
-
     delete options.require
     delete options.initial
     delete options.accept
     delete options.encode
 
     Object.defineProperty(this, 'extra', {value: options})
+    Object.defineProperty(this, 'require', {value: require})
+    Object.defineProperty(this, 'initial', {value: initial})
+    Object.defineProperty(this, 'accept', {value: accept})
+    Object.defineProperty(this, 'encoder', {value: encode})
+  }
+
+  validate (target) {
+    let errors = []
+    let value = this.getSafeValue(target)
+    let hadErrors = target.$errorStorage[this.$$key] != null
+    if (this.require) {
+      if (value == null) {
+        errors.push({required: true})
+      } else if (this.baseType === String && value === '') {
+        errors.push({required: true})
+      }
+    }
+    if (errors.length > 0) {
+      target.$errorStorage[this.$$key] = errors
+      if (!hadErrors) {
+        target.$invalidate('$errors')
+      }
+    } else {
+      delete target.$errorStorage[this.$$key]
+      if (hadErrors) {
+        target.$invalidate('$errors')
+      }
+    }
+  }
+
+  errorsOf (target) {
+    return target.$errorStorage[this.$$key]
   }
 
   setType (typeDefinition) {
@@ -220,23 +247,42 @@ class Attribute {
   }
 
   attachToTarget (target) {
-    let attribute = this
     target.$lazyData[this.$$key] = {}
     Object.defineProperty(target, this.name, {
       enumerable: true,
-      set: function (value) {
-        if (this.$lazyData[attribute.$$key]) {
-          attribute.initializeInTarget(this)
-        }
-        attribute.updateValue(this, value)
-      },
-      get: function () {
-        if (target.$lazyData[attribute.$$key]) {
-          attribute.initializeInTarget(this)
-        }
-        return attribute.getValue(this)
-      }
+      set: this.setterFor(target),
+      get: this.getterFor(target)
     })
+    this.validate(target)
+  }
+
+  getterFor (target) {
+    let attribute = this
+    return function () {
+      if (target.$lazyData[attribute.$$key]) {
+        attribute.initializeInTarget(this)
+      }
+      return attribute.getValue(this)
+    }
+  }
+
+  getSafeValue (target) {
+    if (target.$lazyData[this.$$key]) {
+      return target.$lazyData[this.$$key].value
+    } else {
+      return this.getValue(target)
+    }
+  }
+
+  setterFor (target) {
+    let attribute = this
+    return function (value) {
+      if (this.$lazyData[attribute.$$key]) {
+        attribute.initializeInTarget(this)
+      }
+      attribute.updateValue(this, value)
+      attribute.validate(this)
+    }
   }
 
   initializeInTarget (target) {

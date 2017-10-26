@@ -12,6 +12,7 @@ const $$protocols = Symbol.for('protocols')
 const $$initializing = Symbol('initializing')
 const $$updating = Symbol('updating')
 const $$lazyData = Symbol('lazyData')
+const $$errors = Symbol('errors')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -32,6 +33,7 @@ class ModelDefinitionException extends Error {
 function generateModel (name) {
   let klass = factory(name, function (klass, args) {
     this[$$data] = {}
+    this[$$errors] = {}
     this[$$parents] = {}
     this[$$referenceTracker] = {}
     this[$$initializing] = true
@@ -86,6 +88,11 @@ function generateModel (name) {
           this[$$lazyData] = {}
         }
         return this[$$lazyData]
+      }
+    },
+    $errorStorage: {
+      get () {
+        return this[$$errors]
       }
     }
   })
@@ -264,12 +271,27 @@ function generateModel (name) {
     return false
   }
 
-  klass.derive('$clean', {cache: true}, function () {
+  klass.derive('$clean', {cached: true}, function () {
     const data = {}
     for (let attributeName in klass[$$attributes]) {
       data[attributeName] = klass[$$attributes][attributeName].getEncodedValue(this)
     }
     return data
+  })
+
+  klass.derive('$errors', {cached: true, source: []}, function () {
+    const data = {}
+    for (let attributeName in klass[$$attributes]) {
+      let errors = klass[$$attributes][attributeName].errorsOf(this)
+      if (errors != null && errors.length > 0) {
+        data[attributeName] = errors.slice(0)
+      }
+    }
+    return data
+  })
+
+  klass.derive('$valid', function () {
+    return Object.keys(this.$errors).length === 0
   })
 
   Object.assign(klass.prototype, {
@@ -329,8 +351,8 @@ function generateModel (name) {
 
     $invalidate (name) {
       const derived = klass[$$derived][name]
-      if (derived == null || !(derived instanceof DerivedValue.Async)) {
-        throw new Error(`$force was called for a property that wasn't an async derived value: ${name}`)
+      if (derived == null || !(derived instanceof DerivedValue.Async || derived instanceof DerivedValue.Cached)) {
+        throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
       }
       derived.clearCache(this)
     },
