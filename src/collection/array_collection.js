@@ -1,6 +1,7 @@
 'use strict'
 
-const transformWarnMessage = 'The return of a collection transform was not a model instance, so it was discarded. Please only return model instances from collection transforms.'
+const transformWarnMessage = 'The return of a collection transform was not a model instance, so it was discarded. ' +
+  'Please only return model instances from collection transforms.'
 
 const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
@@ -192,6 +193,10 @@ class ArrayCollection extends EmittingArray {
     return this
   }
 
+  _safeSlice (...args) {
+    return Array.prototype.slice.call(this, ...args)
+  }
+
   $updateAll (items, options) {
     if (items.length === 0) {
       if (this.length > 0) {
@@ -199,7 +204,7 @@ class ArrayCollection extends EmittingArray {
       }
       return this
     }
-    let currentItems = this.slice(0)
+    let currentItems = this._safeSlice(0)
     let newItems = []
     for (let item of items) {
       let currentItem = this.$get(item)
@@ -223,7 +228,7 @@ class ArrayCollection extends EmittingArray {
       }
     }
     this.push(...newItems)
-    let transformedNewItems = this.slice(-1 * newItems.length)
+    let transformedNewItems = this._safeSlice(-1 * newItems.length)
     for (let i = 0; i < newItems.length; i++) {
       items.splice(items.indexOf(newItems[i]), 1, transformedNewItems[i])
     }
