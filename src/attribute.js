@@ -155,7 +155,6 @@ class Attribute {
   }
 
   constructor (name, type, options = {}) {
-    super()
     this.$$key = Symbol(`attributes:${name}`)
     this.name = name
     this.setType(type)
@@ -288,14 +287,6 @@ class Attribute {
     }
   }
 
-  getSafeValue (target) {
-    if (target.$lazyData[this.$$key]) {
-      return target.$lazyData[this.$$key].value
-    } else {
-      return this.getValue(target)
-    }
-  }
-
   setterFor (target) {
     let attribute = this
     return function (value) {
@@ -303,7 +294,14 @@ class Attribute {
         attribute.initializeInTarget(this)
       }
       attribute.updateValue(this, value)
-      attribute.validate(this)
+    }
+  }
+
+  getSafeValue (target) {
+    if (target.$lazyData[this.$$key]) {
+      return target.$lazyData[this.$$key].value
+    } else {
+      return this.getValue(target)
     }
   }
 
@@ -358,12 +356,16 @@ class Attribute {
   maybeUpdateInTarget (target, value, options = {}) {
     return target.$performInTransaction(() => {
       if (target.$lazyData[this.$$key]) {
-        let oldValue = target.$lazyData[this.$$key].value
-        if (oldValue !== value) {
-          target.$lazyData[this.$$key].value = value
-          target.$didChange(this.name)
+        if (options.initializing) {
+          let oldValue = target.$lazyData[this.$$key].value
+          if (oldValue !== value) {
+            target.$lazyData[this.$$key].value = value
+            target.$didChange(this.name)
+            this.validate(target)
+          }
+          return
         }
-        return
+        this.initializeInTarget(target)
       }
       if (this.collection === 'array') {
         this.doUpdateArrayInTarget(target, value, options)
@@ -385,6 +387,7 @@ class Attribute {
           }
         }
       }
+      this.validate(target)
     })
   }
 
