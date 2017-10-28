@@ -43,10 +43,13 @@ const GENERATORS = {
     const Model = require('./model')
     return function (value) {
       if (Model.isInstance(value, type)) {
-        return value
-      } else {
-        return Reflect.construct(type, [value])
+        if (value.$parent != null) {
+          return value
+        } else {
+          value = value.$clean
+        }
       }
+      return Reflect.construct(type, [value])
     }
   }
 }
@@ -152,6 +155,7 @@ class Attribute {
   }
 
   constructor (name, type, options = {}) {
+    super()
     this.$$key = Symbol(`attributes:${name}`)
     this.name = name
     this.setType(type)
@@ -196,6 +200,15 @@ class Attribute {
     Object.defineProperty(this, 'encoder', {value: encode})
   }
 
+  setType (typeDefinition) {
+    const {base: type, collection, generator} = typeDefinition
+    Object.defineProperties(this, {
+      collection: {value: collection},
+      baseType: {value: type}
+    })
+    this[$$generator] = generator
+  }
+
   validate (target) {
     let errors = []
     let value = this.getSafeValue(target)
@@ -224,13 +237,22 @@ class Attribute {
     return target.$errorStorage[this.$$key]
   }
 
-  setType (typeDefinition) {
-    const {base: type, collection, generator} = typeDefinition
-    Object.defineProperties(this, {
-      collection: {value: collection},
-      baseType: {value: type}
-    })
-    this[$$generator] = generator
+  getEncodedValue (target) {
+    let value
+    if (target.$lazyData[this.$$key]) {
+      return target.$lazyData[this.$$key].value
+    } else {
+      value = this.getValue(target)
+    }
+    return this.encode(value)
+  }
+
+  getValue (target) {
+    return target.$data[this.name]
+  }
+
+  updateValue (target, value) {
+    this.maybeUpdateInTarget(target, value)
   }
 
   augmentModel (klass) {
@@ -259,7 +281,7 @@ class Attribute {
   getterFor (target) {
     let attribute = this
     return function () {
-      if (target.$lazyData[attribute.$$key]) {
+      if (this.$lazyData[attribute.$$key]) {
         attribute.initializeInTarget(this)
       }
       return attribute.getValue(this)
@@ -294,14 +316,14 @@ class Attribute {
       value = this.initial
     }
     delete target.$lazyData[this.$$key]
-    target.$whileInitializing(() => {
+    return target.$performInTransaction(() => {
       if (this.collection !== false) {
-        this.initializeCollectionInTarget(target, value)
+        this.initializeCollectionInTarget(target, value, {initializing: true})
       } else if (value != null) {
-        this.maybeUpdateInTarget(target, value)
+        this.maybeUpdateInTarget(target, value, {initializing: true})
       }
       if (lazy.value != null) {
-        this.maybeUpdateInTarget(target, lazy.value)
+        this.maybeUpdateInTarget(target, lazy.value, {initializing: true})
       }
     })
   }
@@ -320,53 +342,57 @@ class Attribute {
     return collection
   }
 
-  setupCollectionWatcher (collection, target) {
-    let attribute = this
-    let listener = function (operation, items) {
-      target.$didChange({[attribute.name]: {[operation]: items}})
-    }
-    collection.$on('add', listener.bind(collection, 'added'))
-    collection.$on('remove', listener.bind(collection, 'removed'))
-  }
-
-  initializeCollectionInTarget (target, value) {
+  initializeCollectionInTarget (target, value, options) {
     let collection
+    let listener = target.$didChange.bind(target, this.name)
 
     collection = this.createCollection()
+    collection.$on({add: listener, remove: listener, update: listener})
+    collection.$setParent(target)
     target.$data[this.name] = collection
 
-    this.maybeUpdateInTarget(target, value)
-    this.setupCollectionWatcher(collection, target)
+    this.maybeUpdateInTarget(target, value, options)
+    target.$on('destroy', collection.destroy.bind(collection))
   }
 
-  maybeUpdateInTarget (target, value, options) {
-    if (target.$lazyData[this.$$key]) {
-      target.$lazyData[this.$$key].value = value
-      return false
-    }
-    if (this.collection === 'array') {
-      this.updateArrayInTarget(target, value, options)
-      return false
-    } else if (this.collection === 'map') {
-      this.updateMapInTarget(target, value, options)
-      return false
-    } else {
-      let nextValue = this.generator(value)
-      let oldValue = target.$data[this.name]
-      if (oldValue !== nextValue) {
-        this.updateInTarget(target, oldValue, nextValue, options)
-        return true
-      } else {
-        return false
+  maybeUpdateInTarget (target, value, options = {}) {
+    return target.$performInTransaction(() => {
+      if (target.$lazyData[this.$$key]) {
+        let oldValue = target.$lazyData[this.$$key].value
+        if (oldValue !== value) {
+          target.$lazyData[this.$$key].value = value
+          target.$didChange(this.name)
+        }
+        return
       }
-    }
+      if (this.collection === 'array') {
+        this.doUpdateArrayInTarget(target, value, options)
+        if (!options.initializing) {
+          target.$didChange(this.name)
+        }
+      } else if (this.collection === 'map') {
+        this.doUpdateMapInTarget(target, value, options)
+        if (!options.initializing) {
+          target.$didChange(this.name)
+        }
+      } else {
+        let nextValue = this.generator(value)
+        let oldValue = target.$data[this.name]
+        if (oldValue !== nextValue) {
+          this.doUpdateInTarget(target, oldValue, nextValue, options)
+          if (!options.initializing) {
+            target.$didChange(this.name)
+          }
+        }
+      }
+    })
   }
 
-  updateInTarget (target, oldValue, nextValue) {
+  doUpdateInTarget (target, oldValue, nextValue) {
     target.$data[this.name] = nextValue
   }
 
-  updateArrayInTarget (target, value, options) {
+  doUpdateArrayInTarget (target, value, options) {
     let currentItems = target.$data[this.name]
     let newItems
     if (value != null) {
@@ -381,24 +407,8 @@ class Attribute {
     currentItems.$updateAll(newItems, options)
   }
 
-  updateMapInTarget (target, value, options) {
+  doUpdateMapInTarget (target, value, options) {
     target.$data[this.name].$updateAll(value || {}, options)
-  }
-
-  constainsModelInstance (parent, child) {
-    if (this.collection === 'array') {
-      return parent[this.name].includes(child)
-    } else if (this.collection === 'map') {
-      let coll = parent.$data[this.name]
-      for (let key of Object.keys(coll)) {
-        if (coll[key] === child) {
-          return true
-        }
-      }
-      return false
-    } else {
-      return parent.$data[this.name] === child
-    }
   }
 
   encode (value) {
@@ -417,60 +427,11 @@ class Attribute {
     }
     return value
   }
-
-  getEncodedValue (target) {
-    if (target.$lazyData[this.$$key]) {
-      return target.$lazyData[this.$$key].value
-    }
-    return this.encode(this.getValue(target))
-  }
-
-  getValue (target) {
-    return target.$data[this.name]
-  }
-
-  updateValue (target, value) {
-    if (this.maybeUpdateInTarget(target, value) && !target.collection) {
-      target.$didChange({[this.name]: target[this.name]})
-    }
-  }
 }
 
 class NestedModelAttribute extends Attribute {
   createCollection () {
     return this.baseType.createCollection(this.collection)
-  }
-
-  attachToTarget (object) {
-    super.attachToTarget(object)
-    object.$setTracker(this.name, this.$$key)
-  }
-
-  setupCollectionWatcher (collection, object) {
-    let attribute = this
-    collection.$on('add', function (elements) {
-      if (attribute.collection === 'array') {
-        for (let item of elements) {
-          item.$addParent(object, object.$tracker(attribute.name))
-        }
-      } else if (attribute.collection === 'map') {
-        for (let key in elements) {
-          elements[key].$addParent(object, object.$tracker(attribute.name))
-        }
-      }
-    })
-    collection.$on('remove', function (elements) {
-      if (attribute.collection === 'array') {
-        for (let item of elements) {
-          item.$removeParent(object, object.$tracker(attribute.name))
-        }
-      } else if (attribute.collection === 'map') {
-        for (let key in elements) {
-          elements[key].$addParent(object, object.$tracker(attribute.name))
-        }
-      }
-    })
-    return super.setupCollectionWatcher(collection, object)
   }
 
   encode (value) {
@@ -483,16 +444,16 @@ class NestedModelAttribute extends Attribute {
     }
   }
 
-  updateInTarget (object, oldValue, nextValue, options) {
+  doUpdateInTarget (object, oldValue, nextValue, options) {
     if (Identifiable.isEqual(oldValue, nextValue)) {
       oldValue.$updateAttributes(nextValue.$clean, options)
     } else {
       if (oldValue != null) {
-        oldValue.$removeParent(object, object.$tracker(this.name))
+        oldValue.$destroy()
       }
-      super.updateInTarget(object, oldValue, nextValue)
+      super.doUpdateInTarget(object, oldValue, nextValue)
       if (nextValue != null) {
-        nextValue.$addParent(object, object.$tracker(this.name))
+        nextValue.$setParent(object)
       }
     }
   }

@@ -6,19 +6,35 @@ const $$data = Symbol('data')
 const $$derived = Symbol('derived')
 const $$mixins = Symbol('mixins')
 const $$isModel = Symbol('isModel')
-const $$parents = Symbol('parents')
+const $$parent = Symbol('parent')
+const $$collection = Symbol('collection')
 const $$referenceTracker = Symbol('referenceTracker')
 const $$protocols = Symbol.for('protocols')
-const $$initializing = Symbol('initializing')
-const $$updating = Symbol('updating')
 const $$lazyData = Symbol('lazyData')
 const $$errors = Symbol('errors')
+const $$cachedClean = Symbol('cachedClean')
+const $$changed = Symbol('changed')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
-const makeEmitter = require('./emitter')
+const EventEmitter = require('./emitter')
+const TransactionManager = require('./transaction')
 const factory = require('./create')
 const Protocol = require('./protocol')
+const deepDiff = require('deep-diff')
+
+var deepFreeze = function (obj) {
+  var propNames = Object.getOwnPropertyNames(obj)
+  propNames.forEach(function (name) {
+    var prop = obj[name]
+    if (typeof prop === 'object' && prop !== null) {
+      if (!Object.isFrozen) {
+        deepFreeze(prop)
+      }
+    }
+  })
+  return Object.freeze(obj)
+}
 
 let Model
 
@@ -32,21 +48,18 @@ class ModelDefinitionException extends Error {
 
 function generateModel (name) {
   let klass = factory(name, function (klass, args) {
+    TransactionManager.call(this)
+    this.constructor = klass
     this[$$data] = {}
     this[$$errors] = {}
-    this[$$parents] = {}
     this[$$referenceTracker] = {}
-    this[$$initializing] = true
-    klass.$emit('creating', this)
-    klass[$$constructor].apply(this, args)
-    klass.$emit('new', this)
-    this.$on('change', function (diff) {
-      for (let parentKey of this.$parents) {
-        this[$$parents][parentKey].$childDidChange(this, diff)
-      }
-    })
-    delete this[$$initializing]
+    this.$destroy = this.$destroy.bind(this)
+    return this.$performInTransaction({constructing: true}, () =>
+      klass[$$constructor].apply(this, args)
+    )
   })
+
+  klass.prototype = new TransactionManager()
 
   klass[$$attributes] = {}
   klass[$$mixins] = []
@@ -77,11 +90,6 @@ function generateModel (name) {
         return this[$$data]
       }
     },
-    $parents: {
-      get () {
-        return Object.getOwnPropertySymbols(this[$$parents])
-      }
-    },
     $lazyData: {
       get () {
         if (this[$$lazyData] == null) {
@@ -91,14 +99,17 @@ function generateModel (name) {
       }
     },
     $errorStorage: {
-      get () {
-        return this[$$errors]
-      }
+      get () { return this[$$errors] }
+    },
+    $parent: {
+      get () { return this[$$parent] }
+    },
+    $collection: {
+      get () { return this[$$collection] }
     }
   })
 
-  makeEmitter(klass)
-  makeEmitter(klass.prototype)
+  EventEmitter.mixin(klass, true)
 
   klass[$$constructor] = function (data) {
     if (data == null) return
@@ -106,7 +117,7 @@ function generateModel (name) {
     for (let attributeName in klass[$$attributes]) {
       const attribute = klass[$$attributes][attributeName]
       if (data[attributeName] != null) {
-        attribute.maybeUpdateInTarget(this, data[attributeName])
+        attribute.updateValue(this, data[attributeName])
       }
     }
   }
@@ -271,15 +282,15 @@ function generateModel (name) {
     return false
   }
 
-  klass.derive('$clean', {cached: true}, function () {
+  klass.derive('$clean', {cached: true, source: 'manual'}, function () {
     const data = {}
     for (let attributeName in klass[$$attributes]) {
       data[attributeName] = klass[$$attributes][attributeName].getEncodedValue(this)
     }
-    return data
+    return deepFreeze(data)
   })
 
-  klass.derive('$errors', {cached: true, source: []}, function () {
+  klass.derive('$errors', {cached: true, source: 'manual'}, function () {
     const data = {}
     for (let attributeName in klass[$$attributes]) {
       let errors = klass[$$attributes][attributeName].errorsOf(this)
@@ -299,27 +310,54 @@ function generateModel (name) {
       if (Model.isInstance(data)) {
         data = data.$clean
       }
-      const difference = {}
-      this[$$updating] = true
-      for (const attributeName in data) {
-        if (attributeName in klass.attributes()) {
-          const attribute = klass.attribute(attributeName)
-          if (attribute.maybeUpdateInTarget(this, data[attributeName], options)) {
-            difference[attributeName] = this[attributeName]
+      this.$performInTransaction(() => {
+        for (const attributeName in data) {
+          if (attributeName in klass.attributes()) {
+            klass.attribute(attributeName)
+              .updateValue(this, data[attributeName], options)
           }
         }
-      }
-      delete this[$$updating]
-      if (Object.keys(difference).length > 0) {
-        this.$didChange(difference, options)
-      }
+      })
       return this
     },
 
-    $whileInitializing (cb) {
-      this[$$initializing] = true
-      cb()
-      delete this[$$initializing]
+    $beforeTransaction (tx) {
+      if (tx.constructing) {
+        this[$$cachedClean] = {}
+        this.constructor.$emit('creating', this)
+      } else {
+        this[$$cachedClean] = this.$clean
+      }
+      if (this.$parent != null) {
+        tx.attach(this.$parent.$pushTransaction())
+      }
+      this[$$changed] = new Set()
+      TransactionManager.prototype.$beforeTransaction.call(this, tx)
+    },
+
+    $afterTransaction (tx) {
+      let difference
+      if (this[$$changed].size > 0) {
+        this.$invalidate('$clean')
+        difference = deepDiff.diff(this[$$cachedClean], this.$clean) || []
+        Object.defineProperty(difference, 'keys', {
+          configurable: false,
+          enumerable: false,
+          value: new Set(difference.map((diff) => diff.path[0]))
+        })
+        for (let derivedName in this.constructor[$$derived]) {
+          this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, difference)
+        }
+        if (!tx.constructing) {
+          this.constructor.$emit('update', this, difference)
+          this.$emit('update', difference)
+        }
+      }
+      if (tx.constructing) {
+        this.constructor.$emit('new', this)
+      }
+      delete this[$$changed]
+      TransactionManager.prototype.$afterTransaction.call(this, tx, difference)
     },
 
     $ensure (...names) {
@@ -343,7 +381,7 @@ function generateModel (name) {
 
     $force (name, value) {
       const derived = klass[$$derived][name]
-      if (derived == null || !(derived instanceof DerivedValue.Async)) {
+      if (derived == null || !(derived instanceof DerivedValue.Cached)) {
         throw new Error(`$force was called for a property that wasn't an async derived value: ${name}`)
       }
       derived.force(this, value)
@@ -351,64 +389,63 @@ function generateModel (name) {
 
     $invalidate (name) {
       const derived = klass[$$derived][name]
-      if (derived == null || !(derived instanceof DerivedValue.Async || derived instanceof DerivedValue.Cached)) {
+      if (derived == null || !(derived instanceof DerivedValue.Cached)) {
         throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
       }
       derived.clearCache(this)
     },
 
-    $clone (isNew = false) {
+    $clone (isNew) {
       let obj = Reflect.construct(klass, [this.$clean])
       if ('$isNew' in obj) {
-        obj.$isNew = isNew
+        if (isNew != null) {
+          obj.$isNew = isNew
+        } else {
+          obj.$isNew = this.$isNew
+        }
       }
       return obj
     },
 
-    $setTracker (name, symbol) {
-      this[$$referenceTracker][name] = symbol
-      this[$$referenceTracker][symbol] = name
-    },
-
-    $tracker (ref) {
-      if (typeof ref === 'string' || typeof ref === 'symbol') {
-        return this[$$referenceTracker][ref]
+    $setParent (parent) {
+      if (this[$$parent] == null) {
+        this[$$parent] = parent
+        parent.$on('destroy', this.$destroy)
+      } else if (this[$$parent] !== parent) {
+        throw new Error('Cannot change an object\'s parent')
       }
     },
 
-    $addParent (parent, key) {
-      const newInParent = !this[$$parents].hasOwnProperty(key)
-      this[$$parents][key] = parent
-      if (newInParent) {
-        this.$emit('addedInObject', parent)
+    $addToCollection (collection) {
+      if (this[$$collection] == null) {
+        this[$$collection] = collection
+        collection.$on('destroy', this.$destroy)
+      } else if (this[$$collection] !== collection) {
+        throw new Error('Cannot change an object\'s containing collection')
       }
-      this.$parent = parent
-    },
-
-    $removeParent (parent, key) {
-      const existedInParent = this[$$parents].hasOwnProperty(key)
-      delete this[$$parents][key]
-      if (existedInParent) {
-        this.$emit('removedFromObject', parent)
-      }
-      if (this.$parent === parent) {
-        delete this.$parent
+      if (collection.$parent) {
+        this.$setParent(collection.$parent)
       }
     },
 
-    $childDidChange (child, diff, options) {
-      for (const attributeName in klass.attributes()) {
-        const attribute = klass.attribute(attributeName)
-        if (Model.isModel(attribute.baseType, child) && attribute.constainsModelInstance(this, child)) {
-          this.$didChange({[attribute.name]: diff}, options)
-        }
+    $didChange (name) {
+      this[$$changed].add(name)
+      if (this.$collection != null) {
+        this.$collection.$emit('update', this)
       }
     },
 
-    $didChange (difference, options) {
-      if (this[$$initializing] === true || this[$$updating] === true) return
-      this.$emit('change', difference, options)
-      klass.$emit('change', this, difference, options)
+    $destroy () {
+      if (this[$$collection]) {
+        this[$$collection].$off('destroy', this.$destroy)
+        delete this[$$collection]
+      }
+      if (this[$$parent]) {
+        this[$$parent].$off('destroy', this.$destroy)
+        delete this[$$parent]
+      }
+      this.$emit('destroy')
+      this.$off()
     }
   })
 

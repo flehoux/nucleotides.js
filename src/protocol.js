@@ -7,7 +7,7 @@ const $$protocols = Symbol.for('protocols')
 const $$priority = Symbol.for('priority')
 
 const factory = require('./create')
-const makeEmitter = require('./emitter')
+const EventEmitter = require('./emitter')
 
 class ProtocolError extends Error {
   constructor (message, key) {
@@ -26,6 +26,7 @@ function generateProtocol (name) {
   }
 
   let protocol = factory(name, function (protocol, args) {
+    this.$prepareEmitter()
     constructor.apply(this, args)
   })
 
@@ -40,8 +41,8 @@ function generateProtocol (name) {
     __proto__: null
   })
 
-  makeEmitter(protocol)
-  makeEmitter(protocol.prototype)
+  EventEmitter.mixin(protocol, true)
+  EventEmitter.mixin(protocol)
 
   const identity = () => {}
 

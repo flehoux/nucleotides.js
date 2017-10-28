@@ -1,4 +1,5 @@
-const makeEmitter = require('./emitter')
+const EventEmitter = require('./emitter')
+const $$parent = Symbol('parent')
 
 class EmittingArray extends Array {
   static get [Symbol.species] () {
@@ -11,96 +12,118 @@ class EmittingArray extends Array {
 
   constructor (...args) {
     super(...args)
-    makeEmitter(this)
+    EventEmitter.mixin(this)
   }
 
-  prepareElements (elements) {
-    if (elements.length === 0) return elements
-    let event = {elements, reason: null, canceled: false}
-    this.$emit('adding', event)
-    if (!event.canceled) {
-      return event.elements
-    } else {
-      throw new Error(event.reason)
+  $setParent (object) {
+    if (this[$$parent] == null) {
+      this[$$parent] = object
+    } else if (this[$$parent] !== object) {
+      throw new Error('Attempt to bind collection to another parent')
     }
   }
 
-  sort (...args) {
-    super.sort(...args)
-    return this
+  get $parent () {
+    return this[$$parent]
   }
 
-  indexOf (item) {
-    return super.indexOf(item)
+  destroy () {
+    this.$emit('destroy')
+    this.$off()
+    delete this[$$parent]
   }
 
-  lastIndexOf (item) {
-    return super.lastIndexOf(item)
-  }
-
-  join (delimiter) {
-    return super.join(delimiter)
+  prepareContext (elements, cb) {
+    let perform = () => {
+      if (typeof elements === 'function') {
+        cb = elements
+        elements = []
+      }
+      if (elements.length === 0) {
+        return cb(elements)
+      }
+      let event = {elements, reason: null, canceled: false}
+      this.$emit('adding', event)
+      if (!event.canceled) {
+        return cb(event.elements)
+      } else {
+        throw new Error(event.reason)
+      }
+    }
+    if (this.$parent != null) {
+      return this.$parent.$performInTransaction(perform)
+    } else {
+      return perform()
+    }
   }
 
   push (...args) {
-    let elements = this.prepareElements(args)
-    let result = super.push(...elements)
-    this.$emit('add', elements)
-    return result
+    return this.prepareContext(args, (elements) => {
+      let result = super.push(...elements)
+      this.$emit('add', elements)
+      return result
+    })
   }
 
   unshift (...args) {
-    let elements = this.prepareElements(args)
-    let result = super.unshift(...elements)
-    this.$emit('add', elements)
-    return result
+    return this.prepareContext(args, (elements) => {
+      let result = super.unshift(...elements)
+      this.$emit('add', elements)
+      return result
+    })
   }
 
   splice (start, deleteCount, ...newElements) {
-    let removed = []
-    newElements = this.prepareElements(newElements)
-    if (deleteCount !== 0) {
-      if (deleteCount == null) {
-        removed = super.slice(start)
-      } else {
-        removed = super.slice(start, start + deleteCount)
+    return this.prepareContext(newElements, (newElements) => {
+      let removed = []
+      if (deleteCount !== 0) {
+        if (deleteCount == null) {
+          removed = super.slice(start)
+        } else {
+          removed = super.slice(start, start + deleteCount)
+        }
       }
-    }
-    let result = super.splice(start, deleteCount, ...newElements)
-    if (removed.length > 0) {
-      this.$emit('remove', new Array(...removed))
-    }
-    if (newElements.length > 0) {
-      this.$emit('add', newElements)
-    }
-    return result
+      let result = super.splice(start, deleteCount, ...newElements)
+      if (removed.length > 0) {
+        this.$emit('remove', new Array(...removed))
+      }
+      if (newElements.length > 0) {
+        this.$emit('add', newElements)
+      }
+      return result
+    })
   }
 
   shift () {
-    var result = super.shift()
-    if (result != null) {
-      this.$emit('remove', [result])
-    }
-    return result
+    return this.prepareContext(() => {
+      var result = super.shift()
+      if (result != null) {
+        this.$emit('remove', [result])
+      }
+      return result
+    })
   }
 
   pop () {
-    var result = super.pop()
-    if (result != null) {
-      this.$emit('remove', [result])
-    }
-    return result
+    return this.prepareContext(() => {
+      var result = super.pop()
+      if (result != null) {
+        this.$emit('remove', [result])
+      }
+      return result
+    })
   }
 
   fill (value, start, end) {
-    let newElements = this.prepareElements([value])
-    let removed = this.slice(start, end)
-    let result = super.fill(newElements[0], start, end)
-    if (removed.length > 0) {
-      this.$emit('remove', removed)
-      this.$emit('add', newElements)
-    }
-    return result
+    return this.prepareContext([value], (newElements) => {
+      let removed = this.slice(start, end)
+      let result = super.fill(newElements[0], start, end)
+      if (removed.length > 0) {
+        this.$emit('remove', removed)
+        this.$emit('add', newElements)
+      }
+      return result
+    })
   }
 
   $clear () {

@@ -5,9 +5,11 @@ const transformWarnMessage = 'The return of a collection transform was not a mod
 
 const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
-const $$key = Symbol('key')
 const $$filters = Symbol('filters')
 const $$transforms = Symbol('transforms')
+
+const $$doUpdateAll = Symbol('doUpdateAll')
+const $$doUpdate = Symbol('doUpdate')
 
 const EmittingArray = require('../emitting_array')
 const Model = require('../model')
@@ -28,38 +30,36 @@ class ArrayCollection extends EmittingArray {
 
   constructor (...args) {
     super(...args)
-    this[$$key] = Symbol('listenKey')
     this[$$filters] = []
     this[$$transforms] = []
-    this.$on('adding', this.transformElements.bind(this))
+    this.$on('adding', this.$$transformElements.bind(this))
     this.$on('add', function (elements) {
-      let listenerKey = this[$$key]
       for (let element of elements) {
-        element[listenerKey] = (diff) => {
-          this.$emit('change', {[this.indexOf(element)]: diff})
-        }
-        element.$on('change', element[listenerKey])
-      }
-    })
-    this.$on('remove', function (elements) {
-      let listenerKey = this[$$key]
-      for (let element of elements) {
-        element.$off('change', element[listenerKey])
+        element.$addToCollection(this)
       }
     })
     this[$$map] = {}
   }
 
   slice (n) {
-    let newColl = ArrayCollection.create(this.$model)
-    newColl.push(...super.slice(n))
-    return newColl
+    let newCollection = ArrayCollection.create(this.$model)
+    let items = Array.prototype.slice.call(this.$clean, n)
+    newCollection.push(...items)
+    return newCollection
   }
 
-  filter (...args) {
-    let newColl = ArrayCollection.create(this.$model)
-    newColl.push(...super.filter(...args))
-    return newColl
+  filter (fn, thisArg) {
+    let newCollection = ArrayCollection.create(this.$model)
+    let items = []
+    for (let item of super.filter(fn, thisArg)) {
+      items.push(item.$clean)
+    }
+    newCollection.push(...items)
+    for (let filterFn of this.$filters) {
+      newCollection.$addFilter(filterFn)
+    }
+    newCollection.$addFilter(fn)
+    return newCollection
   }
 
   get $byKey () {
@@ -74,64 +74,18 @@ class ArrayCollection extends EmittingArray {
     return results
   }
 
-  transformElements (event) {
-    let {elements} = event
-    let newElements = []
-    for (let element of elements) {
-      if (!(element instanceof this.$model)) {
-        element = Reflect.construct(this.$model, [element])
-      }
-      let result = this.prepareElement(element)
-      if (Model.isInstance(result, element.constructor)) {
-        element = result
-      }
-      if (!this.$passesFilters(element)) {
-        continue
-      }
-      element = this.$transformElement(element)
-      newElements.push(element)
-    }
-    event.elements = newElements
-  }
-
   set $model (modelClass) {
     if (this.$model != null) {
       throw new Error("A Collection can't have its associated model changed.")
     }
     if (Model.isModel(modelClass)) {
       this[$$model] = modelClass
-      this.prepareCollection()
+      this.$$prepareCollection()
     }
   }
 
   get $model () {
     return this[$$model]
-  }
-
-  prepareCollection () {
-    if (this.$model.implements(Collectable.prepareCollection)) {
-      Collectable.prepareCollection(this.$model, this)
-    }
-    if (this.$model.hasValue(Identifiable.idKey)) {
-      this.$on('add', function (elements) {
-        for (let element of elements) {
-          let key = Identifiable.idFor(element)
-          this[$$map][key] = element
-        }
-      })
-      this.$on('remove', function (elements) {
-        for (let element of elements) {
-          let key = Identifiable.idFor(element)
-          delete this[$$map][key]
-        }
-      })
-    }
-  }
-
-  prepareElement (element) {
-    if (this.$model.implements(Collectable.prepareElement)) {
-      Collectable.prepareElement(this.$model, this, element)
-    }
   }
 
   $get (id) {
@@ -177,7 +131,7 @@ class ArrayCollection extends EmittingArray {
     return this
   }
 
-  $update (object, options = {}) {
+  [$$doUpdate] (object, options) {
     let existing = this.$get(object)
     if (existing != null) {
       if (Model.isInstance(object)) {
@@ -193,48 +147,82 @@ class ArrayCollection extends EmittingArray {
     return this
   }
 
-  _safeSlice (...args) {
-    return Array.prototype.slice.call(this, ...args)
+  $update (object, options = {}) {
+    if (this.$parent) {
+      return this.$parent.$performInTransaction(() => {
+        this[$$doUpdate](object, options)
+      })
+    } else {
+      this[$$doUpdate](object, options)
+    }
   }
 
-  $updateAll (items, options) {
+  [$$doUpdateAll] (items, options) {
     if (items.length === 0) {
       if (this.length > 0) {
         this.splice(0, this.length)
       }
       return this
     }
-    let currentItems = this._safeSlice(0)
-    let newItems = []
-    for (let item of items) {
-      let currentItem = this.$get(item)
-      if (currentItem != null) {
-        let idx = currentItems.indexOf(currentItem)
-        currentItems.splice(idx, 1)
-        if (Model.isInstance(item)) {
-          item = item.$clean
+    if (Identifiable.idKey(this.$model) == null) {
+      let removed = []
+      for (let item of this) {
+        if (items.indexOf(item) === -1) {
+          removed.push(item)
         }
-        currentItem.$updateAttributes(item, options)
-        idx = items.indexOf(item)
-        items.splice(idx, 1, currentItem)
-      } else {
-        newItems.push(item)
       }
-    }
-    for (let item of this) {
-      let idx = items.indexOf(item)
-      if (idx === -1) {
+      for (let item of removed) {
         this.splice(this.indexOf(item), 1)
       }
-    }
-    this.push(...newItems)
-    let transformedNewItems = this._safeSlice(-1 * newItems.length)
-    for (let i = 0; i < newItems.length; i++) {
-      items.splice(items.indexOf(newItems[i]), 1, transformedNewItems[i])
+      for (let item of items) {
+        if (this.indexOf(item) === -1) {
+          this.push(item)
+        }
+      }
+    } else {
+      items = items.slice(0)
+      let currentItems = this.$$safeSlice(0)
+      let newItems = []
+      for (let item of items) {
+        let currentItem = this.$get(item)
+        if (currentItem != null) {
+          let idx = currentItems.indexOf(currentItem)
+          currentItems.splice(idx, 1)
+          if (Model.isInstance(item)) {
+            item = item.$clean
+          }
+          currentItem.$updateAttributes(item, options)
+          idx = items.indexOf(item)
+          items.splice(idx, 1, currentItem)
+        } else {
+          newItems.push(item)
+        }
+      }
+      for (let item of this) {
+        let idx = items.indexOf(item)
+        if (idx === -1) {
+          this.splice(this.indexOf(item), 1)
+        }
+      }
+      this.push(...newItems)
+      let transformedNewItems = this.$$safeSlice(-1 * newItems.length)
+      for (let i = 0; i < newItems.length; i++) {
+        items.splice(items.indexOf(newItems[i]), 1, transformedNewItems[i])
+      }
     }
     this.sort(function (a, b) {
       return items.indexOf(a) - items.indexOf(b)
     })
+  }
+
+  $updateAll (items, options) {
+    if (this.$parent) {
+      this.$parent.$performInTransaction(() => {
+        this[$$doUpdateAll](items, options)
+      })
+    } else {
+      this[$$doUpdateAll](items, options)
+    }
     return this
   }
 
@@ -297,6 +285,59 @@ class ArrayCollection extends EmittingArray {
       }
     }
     return passed
+  }
+
+  $$prepareCollection () {
+    if (this.$model.implements(Collectable.prepareCollection)) {
+      Collectable.prepareCollection(this.$model, this)
+    }
+    if (this.$model.hasValue(Identifiable.idKey)) {
+      this.$on('add', function (elements) {
+        for (let element of elements) {
+          let key = Identifiable.idFor(element)
+          this[$$map][key] = element
+        }
+      })
+      this.$on('remove', function (elements) {
+        for (let element of elements) {
+          let key = Identifiable.idFor(element)
+          delete this[$$map][key]
+        }
+      })
+    }
+  }
+
+  $$transformElements (event) {
+    let {elements} = event
+    let newElements = []
+    for (let element of elements) {
+      if (element instanceof this.$model && element.$collection !== this) {
+        element = element.$clean
+      }
+      if (!(element instanceof this.$model)) {
+        element = Reflect.construct(this.$model, [element])
+      }
+      let result = this.$$prepareElement(element)
+      if (Model.isInstance(result, element.constructor)) {
+        element = result
+      }
+      if (!this.$passesFilters(element)) {
+        continue
+      }
+      element = this.$transformElement(element)
+      newElements.push(element)
+    }
+    event.elements = newElements
+  }
+
+  $$prepareElement (element) {
+    if (this.$model.implements(Collectable.prepareElement)) {
+      Collectable.prepareElement(this.$model, this, element)
+    }
+  }
+
+  $$safeSlice (...args) {
+    return Array.prototype.slice.call(this, ...args)
   }
 }
 

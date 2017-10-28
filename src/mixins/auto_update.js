@@ -21,11 +21,11 @@ function autoUpdateObject (mixin, conditional) {
       let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
-        self.$updateAttributes(clean, {broadcasted: true})
+        self.$updateAttributes(clean, {skipDifference: true})
       } else if (response != null && typeof response.then === 'function') {
         response.then((resolved) => {
           if (resolved === true) {
-            self.$updateAttributes(clean, {broadcasted: true})
+            self.$updateAttributes(clean, {skipDifference: true})
           }
         })
       }
@@ -35,7 +35,7 @@ function autoUpdateObject (mixin, conditional) {
       if (self === committed) {
         return
       }
-      self.$updateAttributes(committed.$clean, {broadcasted: true})
+      self.$updateAttributes(committed.$clean, {skipDifference: true})
     }
   }
   this.constructor.$on(eventKey, listen)
@@ -59,7 +59,7 @@ function autoUpdateCollection (mixin) {
     switch (operation) {
       case 'saved':
       case 'created':
-        collection.$update(source.$clean, {broadcasted: true, upsert: true})
+        collection.$update(source.$clean, {skipDifference: true, upsert: true})
         break
 
       case 'removed':

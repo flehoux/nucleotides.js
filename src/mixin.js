@@ -16,12 +16,13 @@ const $$models = Symbol('models')
 const $$requirements = Symbol('requirements')
 
 const factory = require('./create')
-const makeEmitter = require('./emitter')
+const EventEmitter = require('./emitter')
 
 function generateMixin (name) {
   let klass = factory(name, function (klass, args) {
     klass[$$constructor].apply(this, args)
     this[$$models] = new Set()
+    this.$prepareEmitter()
     klass.$emit('new', this)
   })
 
@@ -32,8 +33,8 @@ function generateMixin (name) {
     __proto__: null
   })
 
-  makeEmitter(klass)
-  makeEmitter(klass.prototype)
+  EventEmitter.mixin(klass, true)
+  EventEmitter.mixin(klass)
 
   klass[$$constructor] = function (data) {
     if (typeof data === 'object') {

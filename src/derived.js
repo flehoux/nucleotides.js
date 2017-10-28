@@ -51,6 +51,8 @@ class DerivedValue {
       }
     })
   }
+
+  maybeUpdate (target, diff) {}
 }
 
 class CachedDerivedValue extends DerivedValue {
@@ -79,10 +81,16 @@ class CachedDerivedValue extends DerivedValue {
     delete object[this.$$cache]
   }
 
+  force (object, value) {
+    object[this.$$cache] = value
+  }
+
   augmentModel (klass) {
     let derived = this
     if (this.options.eager !== false) {
-      klass.$on('new', (object) => { derived.cache(object) })
+      klass.$on('new', (object) => {
+        derived.cache(object)
+      })
     }
 
     Object.defineProperty(klass.prototype, derived.name, {
@@ -97,28 +105,26 @@ class CachedDerivedValue extends DerivedValue {
         }
       }
     })
+  }
 
+  maybeUpdate (klass, object, diff) {
     if (Array.isArray(this.options.source) && this.options.source.length > 0) {
-      klass.$on('change', function (object, difference) {
-        for (let attributeName of derived.options.source) {
-          if (attributeName in difference) {
-            if (derived.options.eager === true) {
-              derived.cache(object)
-            } else {
-              derived.clearCache(object)
-            }
-            return
-          }
+      for (let attributeName of this.options.source) {
+        if (diff.keys.has(attributeName)) {
+          this.update(object)
+          return
         }
-      })
+      }
     } else if (this.options.source == null || this.options.source === 'all') {
-      klass.$on('change', function (object) {
-        if (derived.options.eager === true) {
-          derived.cache(object)
-        } else {
-          derived.clearCache(object)
-        }
-      })
+      this.update(object)
+    }
+  }
+
+  update (object) {
+    if (this.options.eager === true) {
+      this.cache(object)
+    } else {
+      this.clearCache(object)
     }
   }
 }
@@ -138,6 +144,13 @@ class AsyncDerivedValue extends CachedDerivedValue {
     }
   }
 
+  force (object, value) {
+    object[this.$$promise] = Promise.resolve(value)
+    super.force(object, value)
+    object.$emit('resolved', this.name, value)
+    object.constructor.$emit('resolved', object, this.name, value)
+  }
+
   augmentModel (klass) {
     let derived = this
     if (this.options.eager !== false) {
@@ -149,21 +162,10 @@ class AsyncDerivedValue extends CachedDerivedValue {
         return this[derived.$$cache]
       }
     })
+  }
 
-    if (Array.isArray(this.options.source) && this.options.source.length > 0) {
-      klass.$on('change', function (object, difference) {
-        for (let attributeName of derived.options.source) {
-          if (attributeName in difference) {
-            derived.clearCache(object)
-            return
-          }
-        }
-      })
-    } else if (this.options.source === 'all') {
-      klass.$on('change', function (object, difference) {
-        derived.clearCache(object)
-      })
-    }
+  update (object) {
+    this.clearCache(object)
   }
 
   fetched (object) {
@@ -187,13 +189,6 @@ class AsyncDerivedValue extends CachedDerivedValue {
     } else {
       throw new DerivedDefinitionException('unacceptable', 'Getter function did not return a Promise instance', result)
     }
-  }
-
-  force (object, value) {
-    object[this.$$promise] = Promise.resolve(value)
-    object[this.$$cache] = value
-    object.$emit('resolved', this.name, value)
-    object.constructor.$emit('resolved', object, this.name, value)
   }
 }
 

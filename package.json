@@ -64,5 +64,10 @@
         }
       ]
     ]
+  },
+  "dependencies": {
+    "lodash.clonedeep": "^4.5.0",
+    "deep-diff": "^0.3.8",
+    "wolfy87-eventemitter": "^5.2.0"
   }
 }

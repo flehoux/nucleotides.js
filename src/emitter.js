@@ -1,88 +1,57 @@
-// Extracted from https://github.com/bevacqua/contra/blob/master/emitter.js
-'use strict'
+const BaseEventEmitter = require('wolfy87-eventemitter')
+const $$emitter = Symbol('emitter')
+const $$bound = Symbol('bound')
 
-var tick = (function () {
-  var si = typeof setImmediate === 'function'
-  var _tick
-
-  if (si) {
-    _tick = function (fn) { setImmediate(fn) }
-  } else if (typeof process !== 'undefined' && process.nextTick) {
-    _tick = process.nextTick
-  } else {
-    _tick = function (fn) { setTimeout(fn, 0) }
-  }
-
-  return _tick
-})()
-
-function debounce (fn, args, ctx) {
-  if (!fn) { return }
-  tick(function run () {
-    fn.apply(ctx || null, args || [])
-  })
-};
-
-function noop () {}
-
-module.exports = function makeEmitter (thing, options) {
-  var opts = options || {}
-  const $$listeners = Symbol('listeners')
-  if (thing === undefined) { thing = {} }
-  Object.defineProperty(thing, '$listeners', {
-    get: function () {
-      if (this[$$listeners] == null) {
-        this[$$listeners] = {}
-      }
-      return this[$$listeners]
-    },
-    set: function (value) {
-      this[$$listeners] = value
-    }
-  })
-  thing.$on = function (type, fn) {
-    if (!this.$listeners[type]) {
-      this.$listeners[type] = [fn]
-    } else {
-      this.$listeners[type].push(fn)
-    }
-    return thing
-  }
-  thing.$once = function (type, fn) {
-    fn._once = true // thing.$off(fn) still works!
-    thing.$on(type, fn)
-    return thing
-  }
-  thing.$off = function (type, fn) {
-    var c = arguments.length
-    if (c === 1) {
-      delete this.$listeners[type]
-    } else if (c === 0) {
-      this.$listeners = {}
-    } else {
-      var et = this.$listeners[type]
-      if (!et) { return thing }
-      et.splice(et.indexOf(fn), 1)
-    }
-    return thing
-  }
-  thing.$emit = function (name, ...args) {
-    return this.$emitterSnapshot(name).apply(this, args)
-  }
-  thing.$emitterSnapshot = function (type) {
-    var et = (this.$listeners[type] || []).slice(0)
-    if (et.length === 0) {
-      return noop
-    }
-    return function (...args) {
-      var ctx = this
-      if (type === 'error' && opts.throws !== false && !et.length) { throw args.length === 1 ? args[0] : args }
-      et.forEach(function emitter (listen) {
-        if (opts.async) { debounce(listen, args, ctx) } else { listen.apply(ctx, args) }
-        if (listen._once) { ctx.$off(type, listen) }
-      })
-      return thing
-    }
-  }
-  return thing
+class EventEmitter {
+  constructor () { this.$prepareEmitter() }
 }
+
+const mixin = {
+  $emit (name, ...args) {
+    this[$$emitter].emit(name, ...args)
+  },
+  $on (nameOrObject, cb) {
+    if (typeof nameOrObject === 'string') {
+      cb[$$bound] = cb.bind(this)
+      this[$$emitter].addListener(nameOrObject, cb[$$bound])
+    } else if (typeof nameOrObject === 'object') {
+      for (let eventName in nameOrObject) {
+        let cb = nameOrObject[eventName]
+        cb[$$bound] = cb.bind(this)
+        nameOrObject[eventName] = cb[$$bound]
+      }
+      this[$$emitter].addListeners(nameOrObject)
+    }
+  },
+  $once (name, cb) {
+    cb[$$bound] = cb.bind(this)
+    this[$$emitter].addOnceListener(name, cb[$$bound])
+  },
+  $off (name, cb) {
+    if (name == null) {
+      this[$$emitter].removeAllListeners()
+    } else if (cb == null) {
+      this[$$emitter].removeListeners(name)
+    } else {
+      this[$$emitter].removeListener(name, cb[$$bound])
+    }
+  },
+  $prepareEmitter () {
+    if (!this.hasOwnProperty($$emitter)) {
+      this[$$emitter] = new BaseEventEmitter()
+    }
+  }
+}
+
+EventEmitter.mixin = function (object, toClass) {
+  if (typeof object === 'function' && toClass !== true) {
+    Object.assign(object.prototype, mixin)
+  } else if (typeof object === 'object' || toClass === true) {
+    Object.assign(object, mixin)
+    object.$prepareEmitter()
+  }
+}
+
+EventEmitter.mixin(EventEmitter)
+
+module.exports = EventEmitter
