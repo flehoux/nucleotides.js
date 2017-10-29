@@ -14,6 +14,7 @@ const $$lazyData = Symbol('lazyData')
 const $$errors = Symbol('errors')
 const $$cachedClean = Symbol('cachedClean')
 const $$changed = Symbol('changed')
+const $$parentLocation = Symbol('parentLocation')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -407,9 +408,10 @@ function generateModel (name) {
       return obj
     },
 
-    $setParent (parent) {
+    $setParent (parent, name) {
       if (this[$$parent] == null) {
         this[$$parent] = parent
+        this[$$parentLocation] = name
         parent.$on('destroy', this.$destroy)
       } else if (this[$$parent] !== parent) {
         throw new Error('Cannot change an object\'s parent')
@@ -432,6 +434,8 @@ function generateModel (name) {
       this[$$changed].add(name)
       if (this.$collection != null) {
         this.$collection.$emit('update', this)
+      } else if (this.$parent) {
+        this.$parent.$didChange(this[$$parentLocation])
       }
     },
 

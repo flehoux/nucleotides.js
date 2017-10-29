@@ -456,7 +456,7 @@ class NestedModelAttribute extends Attribute {
       }
       super.doUpdateInTarget(object, oldValue, nextValue)
       if (nextValue != null) {
-        nextValue.$setParent(object)
+        nextValue.$setParent(object, this.name)
       }
     }
   }
