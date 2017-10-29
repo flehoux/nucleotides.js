@@ -21,6 +21,7 @@ const Identifiable = Protocol('Identifiable')
       }
     })
   })
+  .method('equals')
 
 Object.assign(Identifiable, {
   isEqual: function (itemA, itemB) {
@@ -28,6 +29,8 @@ Object.assign(Identifiable, {
       return false
     } else if (itemA.constructor !== itemB.constructor) {
       return false
+    } else if (this.hasImplementationsFor(itemA, 'equals')) {
+      return this.equals(itemA, itemB)
     } else if (this.hasValueFor(itemA, 'idKey') && this.hasValueFor(itemA, 'idKey')) {
       return this.idFor(itemA) === this.idFor(itemB)
     } else {

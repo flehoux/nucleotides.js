@@ -137,7 +137,6 @@ class AsyncDerivedValue extends CachedDerivedValue {
 
   clearCache (object) {
     let loaded = object.hasOwnProperty(this.$$cache)
-    delete object[this.$$cache]
     delete object[this.$$promise]
     if (loaded) {
       this.ensure(object)
