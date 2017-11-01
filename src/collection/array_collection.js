@@ -311,6 +311,7 @@ class ArrayCollection extends EmittingArray {
     let {elements} = event
     let newElements = []
     for (let element of elements) {
+      let isNew = (element.$isNew != null) ? element.$isNew : null
       if (element instanceof this.$model && element.$collection !== this) {
         element = element.$clean
       }
@@ -325,6 +326,9 @@ class ArrayCollection extends EmittingArray {
         continue
       }
       element = this.$transformElement(element)
+      if (isNew != null) {
+        element.$isNew = isNew
+      }
       newElements.push(element)
     }
     event.elements = newElements
