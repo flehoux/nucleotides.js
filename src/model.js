@@ -118,7 +118,7 @@ function generateModel (name) {
     for (let attributeName in klass[$$attributes]) {
       const attribute = klass[$$attributes][attributeName]
       if (data[attributeName] != null) {
-        attribute.updateValue(this, data[attributeName])
+        attribute.setInitialValue(this, data[attributeName])
       }
     }
   }

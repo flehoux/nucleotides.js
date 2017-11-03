@@ -250,6 +250,10 @@ class Attribute {
     return target.$data[this.name]
   }
 
+  setInitialValue (target, value) {
+    this.maybeUpdateInTarget(target, value, {constructing: true})
+  }
+
   updateValue (target, value) {
     this.maybeUpdateInTarget(target, value)
   }
@@ -356,7 +360,7 @@ class Attribute {
   maybeUpdateInTarget (target, value, options = {}) {
     return target.$performInTransaction(() => {
       if (target.$lazyData[this.$$key]) {
-        if (options.initializing) {
+        if (options.constructing) {
           let oldValue = target.$lazyData[this.$$key].value
           if (oldValue !== value) {
             target.$lazyData[this.$$key].value = value
