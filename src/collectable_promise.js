@@ -80,6 +80,7 @@ class CollectablePromise {
   ensure (...names) {
     return this.wrap(this.promise.then((items) => {
       let promises = items.map((item) => item.$ensure(...names))
+      items.$addTransform((item) => item.$ensure(...names))
       return allPromise(promises).then(() => items)
     }))
   }
