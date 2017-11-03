@@ -43,7 +43,7 @@ class ArrayCollection extends EmittingArray {
 
   slice (n) {
     let newCollection = ArrayCollection.create(this.$model)
-    let items = Array.prototype.slice.call(this.$clean, n)
+    let items = Array.prototype.slice.call(this, n).map(item => item.$clone())
     newCollection.push(...items)
     return newCollection
   }
@@ -52,7 +52,7 @@ class ArrayCollection extends EmittingArray {
     let newCollection = ArrayCollection.create(this.$model)
     let items = []
     for (let item of super.filter(fn, thisArg)) {
-      items.push(item.$clean)
+      items.push(item.$clone())
     }
     newCollection.push(...items)
     for (let filterFn of this.$filters) {
@@ -311,9 +311,8 @@ class ArrayCollection extends EmittingArray {
     let {elements} = event
     let newElements = []
     for (let element of elements) {
-      let isNew = (element.$isNew != null) ? element.$isNew : null
       if (element instanceof this.$model && element.$collection !== this) {
-        element = element.$clean
+        element = element.$clone()
       }
       if (!(element instanceof this.$model)) {
         element = Reflect.construct(this.$model, [element])
@@ -326,9 +325,6 @@ class ArrayCollection extends EmittingArray {
         continue
       }
       element = this.$transformElement(element)
-      if (isNew != null) {
-        element.$isNew = isNew
-      }
       newElements.push(element)
     }
     event.elements = newElements
