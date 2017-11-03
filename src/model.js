@@ -24,19 +24,6 @@ const factory = require('./create')
 const Protocol = require('./protocol')
 const deepDiff = require('deep-diff')
 
-var deepFreeze = function (obj) {
-  var propNames = Object.getOwnPropertyNames(obj)
-  propNames.forEach(function (name) {
-    var prop = obj[name]
-    if (typeof prop === 'object' && prop !== null) {
-      if (!Object.isFrozen) {
-        deepFreeze(prop)
-      }
-    }
-  })
-  return Object.freeze(obj)
-}
-
 let Model
 
 class ModelDefinitionException extends Error {
@@ -288,7 +275,7 @@ function generateModel (name) {
     for (let attributeName in klass[$$attributes]) {
       data[attributeName] = klass[$$attributes][attributeName].getEncodedValue(this)
     }
-    return deepFreeze(data)
+    return data
   })
 
   klass.derive('$errors', {cached: true, source: 'manual'}, function () {
