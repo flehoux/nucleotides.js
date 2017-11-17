@@ -59,10 +59,10 @@ module.exports = class TransactionManager extends EventEmitter {
     let res
     try {
       res = fn()
-      tx.end()
     } catch (err) {
-      tx.end()
       throw err
+    } finally {
+      tx.end()
     }
     return res
   }
