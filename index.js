@@ -3,6 +3,7 @@ const Mixin = require('./src/mixin')
 const Protocol = require('./src/protocol')
 const Collection = require('./src/collection')
 const EmittingArray = require('./src/emitting_array')
+const Validator = require('./src/validator')
 
 let promiseFactory = function (...args) {
   return new Promise(...args)
@@ -17,6 +18,7 @@ module.exports = {
   Protocol,
   Collection,
   EmittingArray,
+  Validator,
   makeEmitter: require('./src/emitter')
 
   setPromiseFactory: function (factory) {
@@ -36,12 +38,17 @@ module.exports = {
   }
 }
 
+let mixins = require('./src/mixins')
+for (let mixinName in mixins) {
+  Mixin[mixinName] = mixins[mixinName]
+}
+
 let protocols = require('./src/protocols')
 for (let protocolName in protocols) {
   Protocol[protocolName] = protocols[protocolName]
 }
 
-let mixins = require('./src/mixins')
-for (let mixinName in mixins) {
-  Mixin[mixinName] = mixins[mixinName]
+let validators = require('./src/validators')
+for (let validatorName in validators) {
+  Validator[validatorName] = validators[validatorName]
 }

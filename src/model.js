@@ -11,10 +11,10 @@ const $$collection = Symbol('collection')
 const $$referenceTracker = Symbol('referenceTracker')
 const $$protocols = Symbol.for('protocols')
 const $$lazyData = Symbol('lazyData')
-const $$errors = Symbol('errors')
 const $$cachedClean = Symbol('cachedClean')
 const $$changed = Symbol('changed')
 const $$parentLocation = Symbol('parentLocation')
+const $$validators = Symbol('validators')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -39,7 +39,11 @@ function generateModel (name) {
     TransactionManager.call(this)
     this.constructor = klass
     this[$$data] = {}
-    this[$$errors] = {}
+    this[$$validators] = []
+
+    for (let validatorFactory of klass[$$validators]) {
+      this[$$validators].push(validatorFactory())
+    }
     this[$$referenceTracker] = {}
     this.$destroy = this.$destroy.bind(this)
     return this.$performInTransaction({constructing: true}, () =>
@@ -54,6 +58,7 @@ function generateModel (name) {
   klass[$$derived] = {}
   klass[$$isModel] = true
   klass[$$protocols] = {}
+  klass[$$validators] = []
 
   Object.defineProperties(klass, {
     mixins: {
@@ -86,9 +91,6 @@ function generateModel (name) {
         return this[$$lazyData]
       }
     },
-    $errorStorage: {
-      get () { return this[$$errors] }
-    },
     $parent: {
       get () { return this[$$parent] }
     },
@@ -114,6 +116,14 @@ function generateModel (name) {
     if (fn instanceof Function) {
       klass[$$constructor] = fn
     }
+    return klass
+  }
+
+  klass.validate = function (fn) {
+    if (typeof fn.for === 'function') {
+      fn = fn.for()
+    }
+    this[$$validators].push(fn)
     return klass
   }
 
@@ -278,20 +288,31 @@ function generateModel (name) {
     return data
   })
 
-  klass.derive('$errors', {cached: true, source: 'manual'}, function () {
-    const data = {}
-    for (let attributeName in klass[$$attributes]) {
-      let errors = klass[$$attributes][attributeName].errorsOf(this)
-      if (errors != null && errors.length > 0) {
-        data[attributeName] = errors.slice(0)
+  const issuesAccessor = function (prop, level) {
+    let key = Symbol(prop)
+    return function () {
+      if (!this[key]) {
+        if (this.$forked) {
+          this[key] = Object.create(this.$original[prop], {})
+        } else {
+          this[key] = {}
+        }
+      } else {
+        for (let key in this[key]) {
+          delete this[key][key]
+        }
       }
+      let newIssues = require('./validator').summarize(this, this[$$validators], level)
+      Object.assign(this[key], newIssues)
+      return this[key]
     }
-    return data
-  })
+  }
 
-  klass.derive('$valid', function () {
-    return Object.keys(this.$errors).length === 0
-  })
+  klass.derive('$errors', {cached: true, source: 'manual'}, issuesAccessor('$errors', Symbol.for('error')))
+  klass.derive('$warnings', {cached: true, source: 'manual'}, issuesAccessor('$warnings', Symbol.for('warning')))
+  klass.derive('$notices', {cached: true, source: 'manual'}, issuesAccessor('$notices', Symbol.for('notice')))
+
+  klass.derive('$valid', function () { return Object.keys(this.$errors).length === 0 })
 
   Object.assign(klass.prototype, {
     $updateAttributes (data, options) {
@@ -325,27 +346,66 @@ function generateModel (name) {
 
     $afterTransaction (tx) {
       let difference
-      if (this[$$changed].size > 0) {
-        this.$invalidate('$clean')
-        difference = deepDiff.diff(this[$$cachedClean], this.$clean) || []
-        Object.defineProperty(difference, 'keys', {
-          configurable: false,
-          enumerable: false,
-          value: new Set(difference.map((diff) => diff.path[0]))
-        })
-        for (let derivedName in this.constructor[$$derived]) {
-          this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, difference)
+      if (this[$$changed] != null) {
+        if (this[$$changed].size > 0) {
+          this.$invalidate('$clean')
+          difference = deepDiff.diff(this[$$cachedClean], this.$clean) || []
+          Object.defineProperty(difference, 'keys', {
+            configurable: false,
+            enumerable: false,
+            value: new Set(difference.map((diff) => diff.path[0]))
+          })
+          for (let derivedName in this.constructor[$$derived]) {
+            this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, difference)
+          }
+          if (!tx.constructing) {
+            this.constructor.$emit('update', this, difference)
+            this.$emit('update', difference)
+            this.$validate(this[$$changed])
+          }
         }
-        if (!tx.constructing) {
-          this.constructor.$emit('update', this, difference)
-          this.$emit('update', difference)
+        if (tx.constructing) {
+          this.constructor.$emit('new', this)
+          this.$validate(this[$$changed], null, true)
         }
+        delete this[$$changed]
       }
-      if (tx.constructing) {
-        this.constructor.$emit('new', this)
-      }
-      delete this[$$changed]
       TransactionManager.prototype.$afterTransaction.call(this, tx, difference)
+    },
+
+    $validate (keys, data, constructing = false) {
+      let promises = []
+      const {allPromise} = require('..')
+
+      if (keys instanceof Array) {
+        keys = new Set(keys)
+      } else if (!(keys instanceof Set)) {
+        keys = new Set([keys])
+      }
+
+      for (let validator of this[$$validators]) {
+        if ((constructing && validator.shouldValidateAtCreation) || validator.shouldValidate(keys)) {
+          promises.push(validator.runValidation(this, data))
+        }
+      }
+
+      return allPromise(promises).then((result) => {
+        let union = new Set()
+        for (let set of result) {
+          for (let level of set) {
+            union.add(level)
+          }
+        }
+        if (union.has(Symbol.for('error'))) {
+          this.$invalidate('$errors')
+        }
+        if (union.has(Symbol.for('warning'))) {
+          this.$invalidate('$warnings')
+        }
+        if (union.has(Symbol.for('notice'))) {
+          this.$invalidate('$notices')
+        }
+      })
     },
 
     $ensure (...names) {

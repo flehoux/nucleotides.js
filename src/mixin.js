@@ -14,6 +14,7 @@ const $$classMethods = Symbol('classMethods')
 const $$implementations = Symbol('implementations')
 const $$models = Symbol('models')
 const $$requirements = Symbol('requirements')
+const $$validators = Symbol('validators')
 
 const factory = require('./create')
 const EventEmitter = require('./emitter')
@@ -55,11 +56,20 @@ function generateMixin (name) {
   klass[$$methods] = {}
   klass[$$classMethods] = {}
   klass[$$requirements] = new Set()
+  klass[$$validators] = []
 
   klass.construct = function (fn) {
     if (fn instanceof Function) {
       klass[$$constructor] = fn
     }
+    return klass
+  }
+
+  klass.validate = function (fn) {
+    if (typeof fn.for === 'function') {
+      fn = fn.for()
+    }
+    this[$$validators].push(fn)
     return klass
   }
 
@@ -132,6 +142,7 @@ function generateMixin (name) {
   klass.prototype.augmentModel = function (model) {
     if (!this[$$models].has(model)) {
       augmentWithAttributes(this, model)
+      augmentWithValidators(this, model)
       augmentWithDerivedProperties(this, model)
       augmentWithMethods(this, model)
       augmentWithClassMethods(this, model)
@@ -152,6 +163,16 @@ function generateMixin (name) {
   function augmentWithAttributes (mixin, model) {
     if (Object.keys(klass[$$attributes]).length > 0) {
       model.attributes(klass[$$attributes])
+    }
+  }
+
+  function augmentWithValidators (mixin, model) {
+    for (let validatorFactory of klass[$$validators]) {
+      model.validate(function () {
+        let validator = validatorFactory()
+        validator.mixin = mixin
+        return validator
+      })
     }
   }
 

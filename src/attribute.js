@@ -5,6 +5,7 @@ const $$generator = Symbol('generator')
 
 const Identifiable = require('./protocols/identifiable')
 const EmittingArray = require('./emitting_array')
+const Validators = require('./validators')
 
 const GENERATORS = {
   identity (value) { return value },
@@ -184,19 +185,22 @@ class Attribute {
       require = false,
       initial,
       accept,
-      encode
+      encode,
+      regexp
     } = options
 
     delete options.require
     delete options.initial
     delete options.accept
     delete options.encode
+    delete options.regexp
 
     Object.defineProperty(this, 'extra', {value: options})
     Object.defineProperty(this, 'require', {value: require})
     Object.defineProperty(this, 'initial', {value: initial})
     Object.defineProperty(this, 'accept', {value: accept})
     Object.defineProperty(this, 'encoder', {value: encode})
+    Object.defineProperty(this, 'regexp', {value: regexp})
   }
 
   setType (typeDefinition) {
@@ -206,34 +210,6 @@ class Attribute {
       baseType: {value: type}
     })
     this[$$generator] = generator
-  }
-
-  validate (target) {
-    let errors = []
-    let value = this.getSafeValue(target)
-    let hadErrors = target.$errorStorage[this.$$key] != null
-    if (this.require) {
-      if (value == null) {
-        errors.push({required: true})
-      } else if (this.baseType === String && value === '') {
-        errors.push({required: true})
-      }
-    }
-    if (errors.length > 0) {
-      target.$errorStorage[this.$$key] = errors
-      if (!hadErrors) {
-        target.$invalidate('$errors')
-      }
-    } else {
-      delete target.$errorStorage[this.$$key]
-      if (hadErrors) {
-        target.$invalidate('$errors')
-      }
-    }
-  }
-
-  errorsOf (target) {
-    return target.$errorStorage[this.$$key]
   }
 
   getEncodedValue (target) {
@@ -259,14 +235,24 @@ class Attribute {
   }
 
   augmentModel (klass) {
-    const attribute = this
-    klass.$on('creating', function (object) {
-      attribute.attachToTarget(object)
+    klass.$on('creating', (object) => {
+      this.attachToTarget(object)
     })
-    if (attribute.extra.searchable === true) {
+
+    if (this.require === true) {
+      klass.validate(Validators.Require.for(this.name))
+    }
+    if (this.accept && this.accept.length > 0) {
+      klass.validate(Validators.AcceptedValues.for(this.name, this.accept))
+    }
+    if (this.baseType === String && this.regex instanceof RegExp) {
+      klass.validate(Validators.RegularExpression.for(this.name, this.regexp))
+    }
+
+    if (this.extra.searchable === true) {
       klass.set(require('./protocols/searchable').field, {
-        key: attribute.name,
-        unique: attribute.extra.unique === true
+        key: this.name,
+        unique: this.extra.unique === true
       })
     }
   }
@@ -278,7 +264,6 @@ class Attribute {
       set: this.setterFor(target),
       get: this.getterFor(target)
     })
-    this.validate(target)
   }
 
   getterFor (target) {
@@ -365,7 +350,6 @@ class Attribute {
           if (oldValue !== value) {
             target.$lazyData[this.$$key].value = value
             target.$didChange(this.name)
-            this.validate(target)
           }
           return
         }
@@ -391,7 +375,6 @@ class Attribute {
           }
         }
       }
-      this.validate(target)
     })
   }
 
