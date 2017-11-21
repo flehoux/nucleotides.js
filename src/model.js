@@ -298,8 +298,8 @@ function generateModel (name) {
           this[key] = {}
         }
       } else {
-        for (let key in this[key]) {
-          delete this[key][key]
+        for (let path in this[key]) {
+          delete this[key][path]
         }
       }
       let newIssues = require('./validator').summarize(this, this[$$validators], level)
