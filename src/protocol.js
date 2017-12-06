@@ -297,7 +297,7 @@ function generateProtocol (name) {
         }
       }
       model[$$protocols][protocol.$$key] = Reflect.construct(protocol, [])
-      protocol.$emit('implemented', model)
+      protocol.$emit('implement', model)
     }
   }
 
