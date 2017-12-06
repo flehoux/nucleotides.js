@@ -443,6 +443,14 @@ function generateModel (name) {
       derived.clearCache(this)
     },
 
+    $clear (name) {
+      const derived = klass[$$derived][name]
+      if (derived == null || !(derived instanceof DerivedValue.Cached)) {
+        throw new Error(`$clear was called for a property that wasn't a cached derived value: ${name}`)
+      }
+      derived.clearCache(this, false)
+    },
+
     $clone (isNew) {
       let obj = Reflect.construct(klass, [this.$clean])
       if ('$isNew' in obj) {
