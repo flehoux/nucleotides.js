@@ -13,6 +13,15 @@ const GENERATORS = {
     if (value == null) return ''
     return value.toString()
   },
+  symbol (value) {
+    if (typeof value === 'symbol') {
+      return value
+    } else if (typeof value === 'string') {
+      return Symbol.for(value)
+    } else {
+      return null
+    }
+  },
   number (value) {
     if (typeof value === 'number') {
       return value
@@ -129,6 +138,8 @@ class Attribute {
       return GENERATORS.identity
     } else if (type === String) {
       return GENERATORS.string
+    } else if (type === Symbol) {
+      return GENERATORS.symbol
     } else if (type === Number) {
       return GENERATORS.number
     } else if (type === Boolean) {
@@ -147,7 +158,7 @@ class Attribute {
   }
 
   static get baseTypes () {
-    return [String, Number, Boolean, Date, Object, null]
+    return [String, Symbol, Number, Boolean, Date, Object, null]
   }
 
   static allowsBaseType (type) {
