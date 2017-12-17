@@ -73,6 +73,18 @@ function generateMixin (name) {
     return klass
   }
 
+  klass.attribute = function (name, type, options) {
+    let definition = {}
+    if (options != null) {
+      Object.assign(definition, options)
+      definition.type = type
+    } else {
+      definition = type
+    }
+    klass[$$attributes][name] = definition
+    return klass
+  }
+
   klass.attributes = function (attributes) {
     if (typeof attributes === 'object') {
       for (const name of Object.keys(attributes)) {
