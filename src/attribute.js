@@ -416,6 +416,9 @@ class Attribute {
     if (this.encoder != null) {
       return this.encoder(value)
     }
+    if (this.baseType == null) {
+      return null
+    }
     if (value == null) {
       return value
     }
