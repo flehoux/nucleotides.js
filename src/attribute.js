@@ -452,9 +452,18 @@ class NestedModelAttribute extends Attribute {
       if (oldValue != null) {
         oldValue.$destroy()
       }
-      super.doUpdateInTarget(object, oldValue, nextValue)
+
       if (nextValue != null) {
-        nextValue.$setParent(object, this.name)
+        try {
+          nextValue.$setParent(object, this.name)
+          super.doUpdateInTarget(object, oldValue, nextValue)
+        } catch (err) {
+          if (err.constructor.name === 'AncestryError') {
+            nextValue = nextValue.$clone()
+            nextValue.$setParent(object, this.name)
+            super.doUpdateInTarget(object, oldValue, nextValue)
+          }
+        }
       }
     }
   }
