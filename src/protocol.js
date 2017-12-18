@@ -52,12 +52,19 @@ function generateProtocol (name) {
   }
 
   protocol.method = function (name, options, hook = identity) {
+    let defaultImpl
     if (typeof options === 'function') {
       hook = options
       options = null
     }
     if (options == null) {
       options = {mode: 'single'}
+    }
+    if (typeof options.whenSet === 'function') {
+      hook = options.whenSet
+    }
+    if (typeof options.default === 'function') {
+      defaultImpl = options.default
     }
     let method
     if (options.mode === 'single') {
@@ -79,6 +86,7 @@ function generateProtocol (name) {
     }
     Object.assign(method, {
       hook,
+      defaultImpl,
       protocol,
       options,
       key: name,
@@ -90,6 +98,7 @@ function generateProtocol (name) {
   }
 
   protocol.value = function (name, options, hook = identity) {
+    let defaultValue
     if (typeof options === 'function') {
       hook = options
       options = {}
@@ -97,16 +106,23 @@ function generateProtocol (name) {
     if (options == null) {
       options = {}
     }
+    if (typeof options.whenSet === 'function') {
+      hook = options.whenSet
+    }
+    if (typeof options.default === 'function') {
+      defaultValue = options.default
+    }
     let accessor = function (target) {
       const Model = require('./model')
       if (Model.isInstance(target)) {
-        return protocol.valueFor(target.constructor, name)
+        return protocol.valueFor(target.constructor, name, defaultValue)
       } else if (Model.isModel(target)) {
-        return protocol.valueFor(target, name)
+        return protocol.valueFor(target, name, defaultValue)
       }
     }
     Object.assign(accessor, {
       hook,
+      defaultValue,
       options,
       protocol,
       key: name,
@@ -139,16 +155,21 @@ function generateProtocol (name) {
     }
   }
 
-  protocol.valueFor = function (object, name) {
+  protocol.valueFor = function (object, name, defaultValue) {
     const Model = require('./model')
     if (!protocol[$$values].has(name)) {
       throw new ProtocolError(`Protocol ${protocol.name} does not define value ${name}`, name)
     }
+    let target
     if (Model.isModel(object)) {
-      return object[protocol[name].symbol]
+      target = object
     } else if (Model.isInstance(object)) {
-      return object.constructor[protocol[name].symbol]
+      target = object.constructor
     }
+    if (target[protocol[name].symbol]) {
+      return target[protocol[name].symbol]
+    }
+    return defaultValue
   }
 
   protocol.hasImplementationsFor = function (object, name) {
@@ -195,6 +216,9 @@ function generateProtocol (name) {
     }
     impls = model[protocol[name].symbol]
     if (impls == null || impls.length === 0) {
+      if (typeof protocol[name].defaultImpl === 'function') {
+        return [protocol[name].defaultImpl]
+      }
       throw new ProtocolError(`Model ${model.name} does not implement method ${name} of protocol ${protocol.name}`, name)
     }
     return impls
