@@ -469,7 +469,7 @@ function generateModel (name) {
         this[$$parentLocation] = name
         parent.$on('destroy', this.$destroy)
       } else if (this[$$parent] !== parent) {
-        throw new Error('Cannot change an object\'s parent')
+        throw new Model.AncestryError('Cannot change an object\'s parent')
       }
     },
 
@@ -514,6 +514,8 @@ function generateModel (name) {
 Model = function (...args) {
   return generateModel(...args)
 }
+
+Model.AncestryError = class AncestryError extends Error {}
 
 Object.defineProperties(Model, {
   DefinitionException: {
