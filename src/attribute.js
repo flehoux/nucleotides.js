@@ -200,6 +200,10 @@ class Attribute {
       regexp
     } = options
 
+    if (this.baseType == null && encode == null) {
+      throw new Error('You need to provide either a encoder or a type to an attribute')
+    }
+
     delete options.require
     delete options.initial
     delete options.accept
@@ -225,8 +229,15 @@ class Attribute {
 
   getEncodedValue (target) {
     let value
+    let Model = require('./model')
     if (target.$lazyData[this.$$key]) {
-      return target.$lazyData[this.$$key].value
+      value = target.$lazyData[this.$$key].value
+      if (Model.isModel(this.baseType) && Model.isInstance(value)) {
+        value = this.encode(value)
+      } else if (this.baseType == null) {
+        return this.encode(value)
+      }
+      return value
     } else {
       value = this.getValue(target)
     }
