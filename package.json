@@ -1,5 +1,5 @@
 {
-  "name": "nucleotides",
+  "name": "@n9s/core",
   "version": "0.2.0",
   "description": "Agnostic and extensible organisation of state",
   "main": "index.js",
