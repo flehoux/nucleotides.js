@@ -19,7 +19,7 @@ module.exports = {
   Collection,
   EmittingArray,
   Validator,
-  makeEmitter: require('./src/emitter')
+  makeEmitter: require('./src/emitter').mixin,
 
   setPromiseFactory: function (factory) {
     promiseFactory = factory
