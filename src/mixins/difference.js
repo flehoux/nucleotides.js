@@ -126,7 +126,9 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     Object.defineProperty(forked, '$forked', { get () { return true } })
 
     let applyDeltaFn = function (diff) {
-      forked.$applyDelta(this, diff, true)
+      if (original != null) {
+        forked.$applyDelta(this, diff, true)
+      }
     }
     let rollbackFn = forked.$rollback.bind(forked)
 
