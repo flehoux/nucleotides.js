@@ -166,7 +166,7 @@ function generateProtocol (name) {
     } else if (Model.isInstance(object)) {
       target = object.constructor
     }
-    if (target[protocol[name].symbol]) {
+    if (target.hasOwnProperty(protocol[name].symbol)) {
       return target[protocol[name].symbol]
     }
     return defaultValue
