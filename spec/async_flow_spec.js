@@ -23,10 +23,10 @@ describe('An AsyncFlow instance', function () {
       spy3(arg)
       return flow.continue(arg + 1)
     }
-    let fun4 = (flow, arg) => {
-      spy4(arg)
-      flow.resolve(`yield ${arg}`)
-    }
+    // let fun4 = (flow, arg) => {
+    //   spy4(arg)
+    //   flow.resolve(`yield ${arg}`)
+    // }
 
     let flow = new AsyncFlow([fun1, fun2, fun3, fun4], 1)
     flow.run().then(function () {
