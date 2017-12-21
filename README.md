@@ -9,7 +9,7 @@ Agnostic and extensible model framework
 ## Quick overview
 
 ```javascript
-import {Mixin, Model} from "nucleotides";
+import {Mixin, Model} from "@n9s/core";
 
 var GenealogyMixin = Mixin("Genealogy")
   .derive("parents", function (mixin) {
