@@ -1,5 +1,8 @@
 'use strict'
 
+const $$protocols = Symbol.for('protocols')
+const $$delegates = Symbol.for('delegates')
+
 const $$constructor = Symbol('construct')
 const $$attributes = Symbol('attributes')
 const $$data = Symbol('data')
@@ -9,7 +12,6 @@ const $$isModel = Symbol('isModel')
 const $$parent = Symbol('parent')
 const $$collection = Symbol('collection')
 const $$referenceTracker = Symbol('referenceTracker')
-const $$protocols = Symbol.for('protocols')
 const $$lazyData = Symbol('lazyData')
 const $$cachedClean = Symbol('cachedClean')
 const $$changed = Symbol('changed')
@@ -59,6 +61,7 @@ function generateModel (name) {
   klass[$$isModel] = true
   klass[$$protocols] = {}
   klass[$$validators] = []
+  klass[$$delegates] = {}
 
   Object.defineProperties(klass, {
     mixins: {
@@ -259,25 +262,24 @@ function generateModel (name) {
     return klass
   }
 
+  klass.delegate = function (protocol, getter) {
+    protocol.delegateOnModel(this, getter)
+    return klass
+  }
+
   klass.implement = function (protocolImpl, priority, fun) {
     Protocol.augmentModelWithImplementation(klass, protocolImpl, priority, fun)
     return klass
   }
 
   klass.implements = function (protocolImpl) {
-    const {symbol, protocol, key} = protocolImpl
-    if (this.hasOwnProperty(symbol)) {
-      return protocol.hasImplementationsFor(this, key)
-    }
-    return false
+    const {protocol, key} = protocolImpl
+    return protocol.hasImplementationsFor(this, key)
   }
 
   klass.hasValue = function (protocolImpl) {
-    const {symbol, protocol, key} = protocolImpl
-    if (this.hasOwnProperty(symbol)) {
-      return protocol.hasValueFor(this, key)
-    }
-    return false
+    const {protocol, key} = protocolImpl
+    return protocol.hasValueFor(this, key)
   }
 
   klass.derive('$clean', {cached: true, source: 'manual'}, function () {
