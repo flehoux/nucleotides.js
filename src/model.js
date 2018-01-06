@@ -106,13 +106,7 @@ function generateModel (name) {
 
   klass[$$constructor] = function (data) {
     if (data == null) return
-
-    for (let attributeName in klass[$$attributes]) {
-      const attribute = klass[$$attributes][attributeName]
-      if (data[attributeName] != null) {
-        attribute.setInitialValue(this, data[attributeName])
-      }
-    }
+    this.$setInitialAttributes(data)
   }
 
   klass.construct = function (fn) {
@@ -343,6 +337,15 @@ function generateModel (name) {
   klass.derive('$valid', function () { return Object.keys(this.$errors).length === 0 })
 
   Object.assign(klass.prototype, {
+    $setInitialAttributes (data) {
+      for (let attributeName in klass[$$attributes]) {
+        const attribute = klass[$$attributes][attributeName]
+        if (data[attributeName] != null) {
+          attribute.setInitialValue(this, data[attributeName])
+        }
+      }
+    },
+
     $updateAttributes (data, options) {
       if (Model.isInstance(data)) {
         data = data.$clean
