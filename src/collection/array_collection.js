@@ -311,7 +311,7 @@ class ArrayCollection extends EmittingArray {
     let {elements} = event
     let newElements = []
     for (let element of elements) {
-      if (element instanceof this.$model && element.$collection !== this) {
+      if (element instanceof this.$model && element.$collection != null && element.$collection !== this) {
         element = element.$clone()
       }
       if (!(element instanceof this.$model)) {
