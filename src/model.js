@@ -267,6 +267,32 @@ function generateModel (name) {
     return klass
   }
 
+  klass.proxy = function (key, getter) {
+    if (typeof getter === 'string') {
+      Object.defineProperty(klass.prototype, key, {
+        get () {
+          return this[getter][key]
+        },
+        set (value) {
+          this[getter][key] = value
+        },
+        enumerable: true
+      })
+    } else if (typeof getter === 'function') {
+      Object.defineProperty(klass.prototype, key, {
+        get () {
+          return getter.call(this)[key]
+        },
+        set (value) {
+          let target = getter.call(this)
+          target[key] = value
+        },
+        enumerable: true
+      })
+    }
+    return klass
+  }
+
   klass.implement = function (protocolImpl, priority, fun) {
     Protocol.augmentModelWithImplementation(klass, protocolImpl, priority, fun)
     return klass
