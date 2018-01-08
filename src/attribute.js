@@ -231,11 +231,15 @@ class Attribute {
     let value
     let Model = require('./model')
     if (target.$lazyData[this.$$key]) {
-      value = target.$lazyData[this.$$key].value
-      if (Model.isModel(this.baseType) && Model.isInstance(value)) {
-        value = this.encode(value)
-      } else if (this.baseType == null) {
-        return this.encode(value)
+      if (target.$lazyData[this.$$key].hasOwnProperty('value')) {
+        value = target.$lazyData[this.$$key].value
+        if (Model.isModel(this.baseType) && Model.isInstance(value)) {
+          value = this.encode(value)
+        } else if (this.baseType == null) {
+          return this.encode(value)
+        }
+      } else {
+        return this.initial
       }
       return value
     } else {
@@ -302,9 +306,10 @@ class Attribute {
     let attribute = this
     return function (value) {
       if (this.$lazyData[attribute.$$key]) {
-        attribute.initializeInTarget(this)
+        attribute.initializeInTarget(this, value)
+      } else {
+        attribute.updateValue(this, value)
       }
-      attribute.updateValue(this, value)
     }
   }
 
@@ -316,10 +321,12 @@ class Attribute {
     }
   }
 
-  initializeInTarget (target) {
+  initializeInTarget (target, providedValue) {
     let value
     let lazy = target.$lazyData[this.$$key]
-    if (typeof this.initial === 'function') {
+    if (providedValue != null) {
+      value = providedValue
+    } else if (typeof this.initial === 'function') {
       value = this.initial()
     } else if (this.initial != null) {
       value = this.initial
@@ -333,6 +340,9 @@ class Attribute {
       }
       if (lazy.value != null) {
         this.maybeUpdateInTarget(target, lazy.value, {initializing: true})
+      }
+      if (providedValue != null) {
+        target.$didChange(this.name)
       }
     })
   }
