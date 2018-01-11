@@ -1,6 +1,6 @@
 {
   "name": "@n9s/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Agnostic and extensible organisation of state",
   "main": "index.js",
   "scripts": {
