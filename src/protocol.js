@@ -176,9 +176,9 @@ function generateProtocol (name) {
     let model = this.modelFor(target)
     let getter = model[$$delegates][this.$$key]
     if (typeof getter === 'function') {
-      return getter.call(target)
+      return this.contextFor(getter.call(target))
     } else if (typeof getter === 'string') {
-      return target[getter]
+      return this.contextFor(target[getter])
     } else {
       return target
     }
