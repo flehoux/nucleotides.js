@@ -36,6 +36,10 @@ class ModelDefinitionException extends Error {
   }
 }
 
+let isArray = (!Array.isArray) ? function (arg) {
+  return Object.prototype.toString.call(arg) === '[object Array]'
+} : Array.isArray.bind(Array)
+
 function generateModel (name) {
   let klass = factory(name, function (klass, args) {
     TransactionManager.call(this)
@@ -245,19 +249,37 @@ function generateModel (name) {
   }
 
   klass.set = function (protocolValue, value) {
-    Protocol.augmentModelWithValue(klass, protocolValue, value)
-    return klass
-  }
-
-  klass.add = function (protocolValue, value) {
-    if (protocolValue.options.accumulate === true) {
+    if (isArray(protocolValue)) {
+      for (let _protocolValue of protocolValue) {
+        Protocol.augmentModelWithValue(klass, _protocolValue, value)
+      }
+    } else {
       Protocol.augmentModelWithValue(klass, protocolValue, value)
     }
     return klass
   }
 
+  klass.add = function (protocolValue, value) {
+    if (isArray(protocolValue)) {
+      for (let _protocolValue of protocolValue) {
+        this.add(_protocolValue, value)
+      }
+    } else {
+      if (protocolValue.options.accumulate === true) {
+        Protocol.augmentModelWithValue(klass, protocolValue, value)
+      }
+    }
+    return klass
+  }
+
   klass.delegate = function (protocol, getter) {
-    protocol.delegateOnModel(this, getter)
+    if (isArray(protocol)) {
+      for (let _protocol of protocol) {
+        _protocol.delegateOnModel(this, getter)
+      }
+    } else {
+      protocol.delegateOnModel(this, getter)
+    }
     return klass
   }
 
@@ -288,7 +310,13 @@ function generateModel (name) {
   }
 
   klass.implement = function (protocolImpl, priority, fun) {
-    Protocol.augmentModelWithImplementation(klass, protocolImpl, priority, fun)
+    if (isArray(protocolImpl)) {
+      for (let _protocolImpl of protocolImpl) {
+        Protocol.augmentModelWithImplementation(klass, _protocolImpl, priority, fun)
+      }
+    } else {
+      Protocol.augmentModelWithImplementation(klass, protocolImpl, priority, fun)
+    }
     return klass
   }
 
