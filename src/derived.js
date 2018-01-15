@@ -168,7 +168,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
   }
 
   fetched (object) {
-    return object[this.$$cache] != null
+    return object.hasOwnProperty(this.$$cache)
   }
 
   ensure (object) {
