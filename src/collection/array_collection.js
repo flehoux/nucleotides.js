@@ -44,6 +44,13 @@ class ArrayCollection extends EmittingArray {
   slice (n) {
     let newCollection = ArrayCollection.create(this.$model)
     let items = Array.prototype.slice.call(this, n).map(item => item.$clone())
+    if (newCollection.$model == null) {
+      if (items.length !== 0) {
+        newCollection.$model = items[0].constructor
+      } else if (this.$model != null) {
+        newCollection.$model = this.$model
+      }
+    }
     newCollection.push(...items)
     return newCollection
   }
