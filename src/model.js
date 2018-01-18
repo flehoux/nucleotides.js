@@ -512,6 +512,18 @@ function generateModel (name) {
 
     $clone (isNew) {
       let obj = Reflect.construct(klass, [this.$clean])
+      let {Cached: CachedDerivedValue} = require('./derived')
+      for (let name in klass[$$derived]) {
+        let derived = klass[$$derived][name]
+        if (derived instanceof CachedDerivedValue) {
+          let value = this[derived.$$cache]
+          if (Model.isInstance(value)) {
+            derived.force(obj, value.$clone())
+          } else if (value != null) {
+            derived.force(obj, value)
+          }
+        }
+      }
       if ('$isNew' in obj) {
         if (isNew != null) {
           obj.$isNew = isNew
