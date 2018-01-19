@@ -12,6 +12,7 @@ const EventEmitter = require('../emitter')
 const Model = require('../model')
 const Collectable = require('../protocols/collectable')
 const Identifiable = require('../protocols/identifiable')
+const get = require('lodash.get')
 
 class MapCollection {
   static create (model, data = {}) {
@@ -143,14 +144,14 @@ class MapCollection {
 
   $get (id) {
     if (id != null && typeof id === 'object') {
-      id = id[Identifiable.idKey(this.$model)]
+      id = get(id, Identifiable.idKey(this.$model))
     }
     return this[id]
   }
 
   $has (id) {
     if (id != null && typeof id === 'object') {
-      id = id[Identifiable.idKey(this.$model)]
+      id = get(id, Identifiable.idKey(this.$model))
     }
     return this[id] != null
   }

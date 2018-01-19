@@ -1,4 +1,5 @@
 const Protocol = require('../protocol')
+const get = require('lodash.get')
 
 const Identifiable = Protocol('Identifiable')
   .method('buildUrl')
@@ -40,7 +41,7 @@ Object.assign(Identifiable, {
   idFor: function (object, defaultKey = 'id') {
     const Model = require('../model')
     if (Model.isInstance(object)) {
-      return object[this.idKey(object, defaultKey)]
+      return get(object, this.idKey(object, defaultKey))
     }
   },
   urlFor: function (object, method, value) {
@@ -69,7 +70,7 @@ Object.assign(Identifiable, {
         throw new Error(`Tried to get URL for model without 'Identifiable.url' set: ${model.name}`)
       }
       if (value != null) {
-        components.push(value[Identifiable.idKey(model)])
+        components.push(get(value, Identifiable.idKey(model)))
       }
       return components.join('/')
     }

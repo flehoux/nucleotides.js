@@ -15,6 +15,7 @@ const EmittingArray = require('../emitting_array')
 const Model = require('../model')
 const Collectable = require('../protocols/collectable')
 const Identifiable = require('../protocols/identifiable')
+const get = require('lodash.get')
 
 class ArrayCollection extends EmittingArray {
   static get [Symbol.species] () {
@@ -97,7 +98,7 @@ class ArrayCollection extends EmittingArray {
 
   $get (id) {
     if (id != null && typeof id === 'object') {
-      id = id[Identifiable.idKey(this.$model)]
+      id = get(id, Identifiable.idKey(this.$model))
     }
     return this[$$map][id]
   }
