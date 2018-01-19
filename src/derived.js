@@ -52,7 +52,7 @@ class DerivedValue {
     })
   }
 
-  maybeUpdate (target, diff) {}
+  maybeUpdate () {}
 }
 
 class CachedDerivedValue extends DerivedValue {
@@ -107,10 +107,10 @@ class CachedDerivedValue extends DerivedValue {
     })
   }
 
-  maybeUpdate (klass, object, diff) {
+  maybeUpdate (klass, object, changeset) {
     if (Array.isArray(this.options.source) && this.options.source.length > 0) {
       for (let attributeName of this.options.source) {
-        if (diff.keys.has(attributeName)) {
+        if (changeset.$keys.has(attributeName)) {
           this.update(object)
           return
         }

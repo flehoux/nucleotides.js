@@ -24,6 +24,18 @@
   "bugs": {
     "url": "https://github.com/matehat/nucleotides.js/issues"
   },
+  "standard": {
+    "globals": [
+      "_",
+      "$",
+      "angular",
+      "d3"
+    ],
+    "ignore": [
+      "app/scripts/services/phoenix.es6"
+    ],
+    "parser": "babel-eslint"
+  },
   "homepage": "https://github.com/matehat/nucleotides.js#readme",
   "devDependencies": {
     "babel-plugin-transform-builtin-extend": "^1.1.2",
@@ -31,6 +43,7 @@
     "babel-preset-env": "^1.6.1",
     "babelify": "^7.3.0",
     "browserify": "^14.4.0",
+    "eslint": "^4.15.0",
     "globby": "^6.1.0",
     "gulp": "^3.9.1",
     "gulp-browserify": "^0.5.1",
@@ -66,9 +79,9 @@
     ]
   },
   "dependencies": {
-    "lodash.clonedeep": "^4.5.0",
     "deep-diff": "^0.3.8",
     "lodash.get": "^4.4.2",
+    "lodash.isequal": "^4.5.0",
     "wolfy87-eventemitter": "^5.2.0"
   }
 }

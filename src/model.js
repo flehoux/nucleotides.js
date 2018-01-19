@@ -13,7 +13,6 @@ const $$parent = Symbol('parent')
 const $$collection = Symbol('collection')
 const $$referenceTracker = Symbol('referenceTracker')
 const $$lazyData = Symbol('lazyData')
-const $$cachedClean = Symbol('cachedClean')
 const $$changed = Symbol('changed')
 const $$parentLocation = Symbol('parentLocation')
 const $$validators = Symbol('validators')
@@ -25,6 +24,7 @@ const TransactionManager = require('./transaction')
 const factory = require('./create')
 const Protocol = require('./protocol')
 const deepDiff = require('deep-diff')
+const Difference = require('./difference')
 
 let Model
 
@@ -330,12 +330,20 @@ function generateModel (name) {
     return protocol.hasValueFor(this, key)
   }
 
-  klass.derive('$clean', {cached: true, source: 'manual'}, function () {
-    const data = {}
-    for (let attributeName in klass[$$attributes]) {
-      data[attributeName] = klass[$$attributes][attributeName].getEncodedValue(this)
+  klass.derive('$clean', function () {
+    if (this.$difference != null) {
+      return this.$difference.$currentData
+    } else {
+      return {}
     }
-    return data
+  })
+
+  klass.derive('$isPristine', function () {
+    if (this.$difference != null) {
+      return this.$difference.$isPristine
+    } else {
+      return true
+    }
   })
 
   const issuesAccessor = function (prop, level) {
@@ -381,8 +389,7 @@ function generateModel (name) {
       this.$performInTransaction(() => {
         for (const attributeName in data) {
           if (attributeName in klass.attributes()) {
-            klass.attribute(attributeName)
-              .updateValue(this, data[attributeName], options)
+            klass.attribute(attributeName).updateValue(this, data[attributeName], options)
           }
         }
       })
@@ -391,10 +398,7 @@ function generateModel (name) {
 
     $beforeTransaction (tx) {
       if (tx.constructing) {
-        this[$$cachedClean] = {}
         this.constructor.$emit('creating', this)
-      } else {
-        this[$$cachedClean] = this.$clean
       }
       if (this.$parent != null) {
         tx.attach(this.$parent.$pushTransaction())
@@ -404,32 +408,27 @@ function generateModel (name) {
     },
 
     $afterTransaction (tx) {
-      let difference
+      let changeset
       if (this[$$changed] != null) {
-        if (this[$$changed].size > 0) {
-          this.$invalidate('$clean')
-          difference = deepDiff.diff(this[$$cachedClean], this.$clean) || []
-          Object.defineProperty(difference, 'keys', {
-            configurable: false,
-            enumerable: false,
-            value: new Set(difference.map((diff) => diff.path[0]))
-          })
-          for (let derivedName in this.constructor[$$derived]) {
-            this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, difference)
-          }
-          if (!tx.constructing) {
-            this.constructor.$emit('update', this, difference)
-            this.$emit('update', difference)
+        if (this[$$changed].size > 0 && !tx.constructing) {
+          changeset = this.$difference.$compare()
+          if (changeset.$size > 0) {
+            for (let derivedName in this.constructor[$$derived]) {
+              this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, changeset)
+            }
+            this.constructor.$emit('update', this, changeset)
+            this.$emit('update', changeset)
             this.$validate(this[$$changed])
           }
         }
         if (tx.constructing) {
+          Object.defineProperty(this, '$difference', {value: new Difference(this)})
           this.constructor.$emit('new', this)
           this.$validate(this[$$changed], null, true)
         }
         delete this[$$changed]
       }
-      TransactionManager.prototype.$afterTransaction.call(this, tx, difference)
+      TransactionManager.prototype.$afterTransaction.call(this, tx, changeset)
     },
 
     $validate (keys, data, constructing = false) {

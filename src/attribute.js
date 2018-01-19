@@ -10,7 +10,7 @@ const Validators = require('./validators')
 const GENERATORS = {
   identity (value) { return value },
   string (value) {
-    if (value == null) return ''
+    if (value == null) return
     return value.toString()
   },
   symbol (value) {
