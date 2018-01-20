@@ -23,7 +23,6 @@ const EventEmitter = require('./emitter')
 const TransactionManager = require('./transaction')
 const factory = require('./create')
 const Protocol = require('./protocol')
-const deepDiff = require('deep-diff')
 const Difference = require('./difference')
 
 let Model
