@@ -441,10 +441,16 @@ function generateModel (name) {
         keys = new Set([keys])
       }
 
+      let shouldWait = false
       for (let validator of this[$$validators]) {
         if ((constructing && validator.shouldValidateAtCreation) || validator.shouldValidate(keys)) {
+          shouldWait = true
           promises.push(validator.runValidation(this, data))
         }
+      }
+
+      if (shouldWait) {
+        return Promise.resolve(null)
       }
 
       return allPromise(promises).then((result) => {
