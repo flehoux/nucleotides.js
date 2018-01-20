@@ -125,11 +125,11 @@ class ValidationIssue {
   updateWith (data, level) {
     if (this.data !== data) {
       this.data = data
-      this.validator[$$changedLevels] = true
+      this.validator[$$changedLevels].add(this.level)
     }
     if (this.level !== level) {
       this.level = level
-      this.validator[$$changedLevels] = true
+      this.validator[$$changedLevels].add(this.level)
     }
   }
 }
