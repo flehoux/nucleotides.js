@@ -188,18 +188,16 @@ class ArrayCollection extends EmittingArray {
         }
       }
     } else {
-      items = items.slice(0)
-      let currentItems = this.$$safeSlice(0)
+      items = [...items]
+      let currentItems = [...this]
       let newItems = []
       for (let item of items) {
         let currentItem = this.$get(item)
         if (currentItem != null) {
           let idx = currentItems.indexOf(currentItem)
           currentItems.splice(idx, 1)
-          if (Model.isInstance(item)) {
-            item = item.$clean
-          }
-          currentItem.$updateAttributes(item, options)
+          let newData = (Model.isInstance(item)) ? item.$clean : item
+          currentItem.$updateAttributes(newData, options)
           idx = items.indexOf(item)
           items.splice(idx, 1, currentItem)
         } else {
