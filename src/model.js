@@ -51,23 +51,34 @@ let isArray = (!Array.isArray) ? function (arg) {
 } : Array.isArray.bind(Array)
 
 function generateModel (name) {
+  let _initFn
   let klass = factory(name, function (klass, args) {
     TransactionManager.call(this)
     this.constructor = klass
     this[$$data] = {}
-    this[$$validators] = []
 
-    for (let validatorFactory of klass[$$validators]) {
-      this[$$validators].push(validatorFactory())
-    }
-    this[$$referenceTracker] = {}
     this.$destroy = this.$destroy.bind(this)
-    return this.$performInTransaction({constructing: true}, () =>
-      klass[$$constructor].apply(this, args)
-    )
+    return this.$performInTransaction({constructing: true}, () => {
+      let result
+      if (_initFn) {
+        let fn = _initFn
+        _initFn = null
+        result = fn.call(this, ...args)
+      } else {
+        result = klass[$$constructor].apply(this, args)
+      }
+      return result
+    })
   })
 
   klass.prototype = new TransactionManager()
+
+  klass.initializer = function (initFn) {
+    return function (...args) {
+      _initFn = initFn
+      return Reflect.construct(klass, args)
+    }
+  }
 
   klass[$$attributes] = {}
   klass[$$mixins] = []
@@ -360,6 +371,9 @@ function generateModel (name) {
   const issuesAccessor = function (prop, level) {
     let key = Symbol(prop)
     return function () {
+      if (!this[$$validating]) {
+        return {}
+      }
       if (!this[key]) {
         if (this.$forked) {
           this[key] = Object.create(this.$original[prop], {})
@@ -383,6 +397,42 @@ function generateModel (name) {
 
   klass.derive('$valid', function () { return Object.keys(this.$errors).length === 0 })
 
+  const cloneFn = klass.initializer(function (base, isNew) {
+    for (let name in klass[$$attributes]) {
+      klass.attribute(name).clone(base, this)
+    }
+
+    let {Cached: CachedDerivedValue} = require('./derived')
+    for (let name in klass[$$derived]) {
+      let derived = klass[$$derived][name]
+      if (derived instanceof CachedDerivedValue) {
+        let value = base[derived.$$cache]
+        if (Model.isInstance(value)) {
+          derived.force(this, value.$clone())
+        } else if (value != null) {
+          derived.force(this, value)
+        }
+      }
+    }
+    if ('$isNew' in this) {
+      if (isNew != null) {
+        this.$isNew = isNew
+      } else {
+        this.$isNew = base.$isNew
+      }
+    }
+    if (base[$$tracking]) {
+      this.$startTracking()
+    }
+    if (base[$$validating]) {
+      this.$startValidating()
+    }
+  })
+
+  klass.prototype.$clone = function (isNew) {
+    return cloneFn(this, isNew)
+  }
+
   Object.assign(klass.prototype, {
     $setInitialAttributes (data) {
       for (let attributeName in klass[$$attributes]) {
@@ -401,7 +451,15 @@ function generateModel (name) {
     },
 
     $startValidating () {
+      if (this[$$validating]) return
+
+      this[$$validators] = []
       this[$$validating] = true
+
+      for (let validatorFactory of klass[$$validators]) {
+        this[$$validators].push(validatorFactory())
+      }
+
       this.$startTracking()
       this.$validate(new Set(Object.keys(this.constructor.attributes())), null, true)
       this.constructor.$emit('startValidating', this)
@@ -459,6 +517,7 @@ function generateModel (name) {
     $validate (keys, data, constructing = false) {
       let promises = []
       const {allPromise} = require('..')
+      this.$startValidating()
 
       if (keys instanceof Array) {
         keys = new Set(keys)
@@ -499,6 +558,8 @@ function generateModel (name) {
 
     $ensure (...names) {
       const promises = []
+      const {allPromise, resolvePromise} = require('..')
+      const get = require('lodash.get')
       for (name of names) {
         let promise
         if (isArray(name)) {
@@ -511,10 +572,27 @@ function generateModel (name) {
           }
         } else {
           const derived = klass[$$derived][name]
-          if (derived == null || !(derived instanceof DerivedValue.Async)) {
+          if (derived == null) {
+            if (name.indexOf('.') !== -1) {
+              let value = get(this, name)
+              if (value != null) {
+                promise = resolvePromise(value)
+              } else {
+                let symbol = Symbol.for(`Promise:${name}`)
+                if (this[symbol] == null) {
+                  this[symbol] = this.$ensure(name.split('.')).then((ret) => {
+                    delete this[symbol]
+                    return ret
+                  })
+                }
+                promise = this[symbol]
+              }
+            } else if (!(derived instanceof DerivedValue.Async)) {
+              throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
+            }
+          } else if (!(derived instanceof DerivedValue.Async)) {
             throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
-          }
-          if (!derived.fetched(this)) {
+          } else if (!derived.fetched(this)) {
             promise = derived.ensure(this)
           }
         }
@@ -522,7 +600,6 @@ function generateModel (name) {
           promises.push(promise)
         }
       }
-      const {allPromise, resolvePromise} = require('..')
       if (promises.length > 0) {
         return allPromise(promises).then(() => this)
       } else {
@@ -556,36 +633,6 @@ function generateModel (name) {
         }
         derived.clearCache(this, false)
       }
-    },
-
-    $clone (isNew) {
-      let obj = Reflect.construct(klass, [this.$clean])
-      let {Cached: CachedDerivedValue} = require('./derived')
-      for (let name in klass[$$derived]) {
-        let derived = klass[$$derived][name]
-        if (derived instanceof CachedDerivedValue) {
-          let value = this[derived.$$cache]
-          if (Model.isInstance(value)) {
-            derived.force(obj, value.$clone())
-          } else if (value != null) {
-            derived.force(obj, value)
-          }
-        }
-      }
-      if ('$isNew' in obj) {
-        if (isNew != null) {
-          obj.$isNew = isNew
-        } else {
-          obj.$isNew = this.$isNew
-        }
-      }
-      if (this[$$tracking]) {
-        obj.$startTracking()
-      }
-      if (this[$$validating]) {
-        obj.$startValidating()
-      }
-      return obj
     },
 
     $setParent (parent, name) {

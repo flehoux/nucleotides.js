@@ -88,13 +88,14 @@ function generateProtocol (name) {
         return protocol.getAsyncMiddleware(target, name, ...args).run()
       }
     }
+    let symbol = Symbol(`${protocol.name}.${name}`)
     Object.assign(method, {
       hook,
       defaultImpl,
       protocol,
       options,
+      symbol,
       key: name,
-      symbol: Symbol(`${protocol.name}.${name}`),
       flowAll: function (...args) {
         let impls = []
         for (let model of protocol.supportingModels()) {
@@ -109,6 +110,12 @@ function generateProtocol (name) {
           const Flow = require('./flow')
           return new Flow(impls, ...args)
         }
+      },
+      cached: function (store, getter) {
+        if (store[symbol] == null) {
+          store[symbol] = getter.call(store)
+        }
+        return store[symbol]
       }
     })
     protocol[$$methods].add(name)

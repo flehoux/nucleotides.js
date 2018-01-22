@@ -73,6 +73,8 @@ class AttributeDefinitionException extends Error {
 }
 
 class Attribute {
+  static get isModel () { return false }
+
   static create (name, type, options) {
     let typeDefinition = this.parseType(type)
     if (typeDefinition.model) {
@@ -187,6 +189,10 @@ class Attribute {
 
   get generator () {
     return this[$$generator]
+  }
+
+  clone (source, target) {
+    this.setInitialValue(target, this.getEncodedValue(source))
   }
 
   parseOptions (options) {
@@ -338,7 +344,7 @@ class Attribute {
       } else if (value != null) {
         this.maybeUpdateInTarget(target, value, {initializing: true})
       }
-      if (lazy.value != null) {
+      if (providedValue == null && lazy.value != null) {
         this.maybeUpdateInTarget(target, lazy.value, {initializing: true})
       }
       if (providedValue != null) {
@@ -455,6 +461,21 @@ class Attribute {
 }
 
 class NestedModelAttribute extends Attribute {
+  static get isModel () { return true }
+
+  clone (source, target) {
+    if (source.$data.hasOwnProperty(this.name)) {
+      if (this.collection) {
+        this.initializeInTarget(target)
+        target.$data[this.name].$updateAll(source.$data[this.name])
+      } else {
+        this.initializeInTarget(target, this.getValue(source))
+      }
+    } else {
+      this.setInitialValue(target, this.getEncodedValue(source))
+    }
+  }
+
   createCollection () {
     return this.baseType.createCollection(this.collection)
   }
