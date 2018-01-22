@@ -37,6 +37,15 @@ class ModelDefinitionException extends Error {
   }
 }
 
+const nestedEnsure = function (part, context) {
+  const {resolvePromise} = require('..')
+  if (context != null) {
+    return context.$ensure(part).then(() => context[part])
+  } else {
+    return resolvePromise(null)
+  }
+}
+
 let isArray = (!Array.isArray) ? function (arg) {
   return Object.prototype.toString.call(arg) === '[object Array]'
 } : Array.isArray.bind(Array)
@@ -491,12 +500,26 @@ function generateModel (name) {
     $ensure (...names) {
       const promises = []
       for (name of names) {
-        const derived = klass[$$derived][name]
-        if (derived == null || !(derived instanceof DerivedValue.Async)) {
-          throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
+        let promise
+        if (isArray(name)) {
+          for (let part of name) {
+            if (promise != null) {
+              promise = promise.then(nestedEnsure.bind(this, part))
+            } else {
+              promise = nestedEnsure(part, this)
+            }
+          }
+        } else {
+          const derived = klass[$$derived][name]
+          if (derived == null || !(derived instanceof DerivedValue.Async)) {
+            throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
+          }
+          if (!derived.fetched(this)) {
+            promise = derived.ensure(this)
+          }
         }
-        if (!derived.fetched(this)) {
-          promises.push(derived.ensure(this))
+        if (promise != null) {
+          promises.push(promise)
         }
       }
       const {allPromise, resolvePromise} = require('..')
