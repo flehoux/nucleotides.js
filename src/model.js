@@ -448,7 +448,7 @@ function generateModel (name) {
         }
       }
 
-      if (shouldWait) {
+      if (!shouldWait) {
         return Promise.resolve(null)
       }
 
