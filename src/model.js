@@ -16,6 +16,8 @@ const $$lazyData = Symbol('lazyData')
 const $$changed = Symbol('changed')
 const $$parentLocation = Symbol('parentLocation')
 const $$validators = Symbol('validators')
+const $$tracking = Symbol('tracking')
+const $$validating = Symbol('validating')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -330,6 +332,7 @@ function generateModel (name) {
   }
 
   klass.derive('$clean', function () {
+    this.$startTracking()
     if (this.$difference != null) {
       return this.$difference.$currentData
     } else {
@@ -381,6 +384,21 @@ function generateModel (name) {
       }
     },
 
+    $startTracking () {
+      if (!this[$$tracking]) {
+        this[$$tracking] = true
+        Object.defineProperty(this, '$difference', {value: new Difference(this)})
+      }
+    },
+
+    $startValidating () {
+      this[$$validating] = true
+      this.$startTracking()
+      this.$validate(new Set(Object.keys(this.constructor.attributes())), null, true)
+      this.constructor.$emit('startValidating', this)
+      this.$emit('startValidating')
+    },
+
     $updateAttributes (data, options) {
       if (Model.isInstance(data)) {
         data = data.$clean
@@ -410,6 +428,7 @@ function generateModel (name) {
       let changeset
       if (this[$$changed] != null) {
         if (this[$$changed].size > 0 && !tx.constructing) {
+          this.$startTracking()
           changeset = this.$difference.$compare()
           if (changeset.$size > 0) {
             for (let derivedName in this.constructor[$$derived]) {
@@ -421,9 +440,7 @@ function generateModel (name) {
           }
         }
         if (tx.constructing) {
-          Object.defineProperty(this, '$difference', {value: new Difference(this)})
           this.constructor.$emit('new', this)
-          this.$validate(this[$$changed], null, true)
         }
         delete this[$$changed]
       }
@@ -498,20 +515,24 @@ function generateModel (name) {
       derived.force(this, value)
     },
 
-    $invalidate (name) {
-      const derived = klass[$$derived][name]
-      if (derived == null || !(derived instanceof DerivedValue.Cached)) {
-        throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
+    $invalidate (...names) {
+      for (let name of names) {
+        const derived = klass[$$derived][name]
+        if (derived == null || !(derived instanceof DerivedValue.Cached)) {
+          throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
+        }
+        derived.clearCache(this)
       }
-      derived.clearCache(this)
     },
 
-    $clear (name) {
-      const derived = klass[$$derived][name]
-      if (derived == null || !(derived instanceof DerivedValue.Cached)) {
-        throw new Error(`$clear was called for a property that wasn't a cached derived value: ${name}`)
+    $clear (...names) {
+      for (let name of names) {
+        const derived = klass[$$derived][name]
+        if (derived == null || !(derived instanceof DerivedValue.Cached)) {
+          throw new Error(`$clear was called for a property that wasn't a cached derived value: ${name}`)
+        }
+        derived.clearCache(this, false)
       }
-      derived.clearCache(this, false)
     },
 
     $clone (isNew) {
@@ -534,6 +555,12 @@ function generateModel (name) {
         } else {
           obj.$isNew = this.$isNew
         }
+      }
+      if (this[$$tracking]) {
+        obj.$startTracking()
+      }
+      if (this[$$validating]) {
+        obj.$startValidating()
       }
       return obj
     },
