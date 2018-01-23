@@ -5,8 +5,17 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     let forked = this.$clone(this.$isNew)
     let original = this
 
-    Object.defineProperty(forked, '$original', { get () { return original } })
-    Object.defineProperty(forked, '$forked', { get () { return true } })
+    forked.$startTracking()
+    original.$startTracking()
+
+    Object.defineProperties(forked, {
+      $original: {
+        get () { return original }
+      },
+      $forked: {
+        get () { return true }
+      }
+    })
 
     let applyDeltaFn = function (changeset) {
       if (original != null && changeset.$size > 0) {
