@@ -17,6 +17,7 @@ const $$parentLocation = Symbol('parentLocation')
 const $$validators = Symbol('validators')
 const $$tracking = Symbol('tracking')
 const $$validating = Symbol('validating')
+const $$selfPromise = Symbol('self')
 
 const Attribute = require('./attribute')
 const DerivedValue = require('./derived')
@@ -54,9 +55,10 @@ function generateModel (name) {
   let klass = factory(name, function (klass, args) {
     TransactionManager.call(this)
     this.constructor = klass
-    this[$$data] = {}
 
+    this[$$data] = {}
     this.$destroy = this.$destroy.bind(this)
+
     return this.$performInTransaction({constructing: true}, () => {
       let result
       if (_initFn) {
@@ -123,6 +125,14 @@ function generateModel (name) {
     },
     $collection: {
       get () { return this[$$collection] }
+    },
+    $selfPromise: {
+      get () {
+        if (this[$$selfPromise] == null) {
+          this[$$selfPromise] = require('..').resolvePromise(this)
+        }
+        return this[$$selfPromise]
+      }
     }
   })
 
@@ -556,9 +566,10 @@ function generateModel (name) {
     },
 
     $ensure (...names) {
-      const promises = []
-      const {allPromise, resolvePromise} = require('..')
+      const {allPromise} = require('..')
       const get = require('lodash.get')
+      const promises = []
+
       for (name of names) {
         let promise
         if (isArray(name)) {
@@ -575,7 +586,7 @@ function generateModel (name) {
             if (name.indexOf('.') !== -1) {
               let value = get(this, name)
               if (value != null) {
-                promise = resolvePromise(value)
+                promise = this.$selfPromise
               } else {
                 let symbol = Symbol.for(`Promise:${name}`)
                 if (this[symbol] == null) {
@@ -602,7 +613,7 @@ function generateModel (name) {
       if (promises.length > 0) {
         return allPromise(promises).then(() => this)
       } else {
-        return resolvePromise(this)
+        return this.$selfPromise
       }
     },
 
