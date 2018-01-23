@@ -1,5 +1,8 @@
 'use strict'
 
+const transformWarnMessage = 'The return of a collection transform was not a model instance, so it was discarded. ' +
+  'Please only return model instances from collection transforms.'
+
 const $$model = Symbol('Model')
 const $$map = Symbol.for('map')
 const $$set = Symbol('set')
@@ -248,6 +251,22 @@ class MapCollection {
     return this
   }
 
+  $transformElement (element) {
+    for (let transform of this[$$transforms]) {
+      let newElement = transform(element)
+      if (Model.isInstance(newElement)) {
+        element = newElement
+      } else {
+        console.warn(transformWarnMessage, newElement, transform)
+      }
+    }
+    return element
+  }
+
+  get $transforms () {
+    return this[$$transforms].slice(0)
+  }
+
   $addFilter (fn) {
     if (this[$$filters].indexOf(fn) < 0) {
       this[$$filters].push(fn)
@@ -263,11 +282,29 @@ class MapCollection {
     return this
   }
 
+  $passesFilters (element) {
+    let passed = true
+    for (let filter of this[$$filters]) {
+      if (!filter(element)) {
+        passed = false
+        break
+      }
+    }
+    return passed
+  }
+
+  get $filters () {
+    return this[$$filters].slice(0)
+  }
+
   $$transformElements (event) {
     let {elements} = event
     let newElements = {}
     for (let key in elements) {
       let element = elements[key]
+      if (element instanceof this.$model && element.$collection != null && element.$collection !== this) {
+        element = element.$clone()
+      }
       if (!(element instanceof this.$model)) {
         element = Reflect.construct(this.$model, [element])
       }
@@ -275,19 +312,10 @@ class MapCollection {
       if (Model.isInstance(result, element.constructor)) {
         element = result
       }
-      let shouldAdd = true
-      for (let filter of this[$$filters]) {
-        if (!filter(element)) {
-          shouldAdd = false
-          break
-        }
-      }
-      if (!shouldAdd) {
+      if (!this.$passesFilters(element)) {
         continue
       }
-      for (let transform of this[$$transforms]) {
-        element = transform(element)
-      }
+      element = this.$transformElement(element)
       newElements[key] = element
     }
     event.elements = newElements
