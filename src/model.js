@@ -51,7 +51,6 @@ let isArray = (!Array.isArray) ? function (arg) {
 } : Array.isArray.bind(Array)
 
 function generateModel (name) {
-  let _initFn
   let klass = factory(name, function (klass, args) {
     TransactionManager.call(this)
     this.constructor = klass
@@ -60,15 +59,13 @@ function generateModel (name) {
     this.$destroy = this.$destroy.bind(this)
 
     return this.$performInTransaction({constructing: true}, () => {
-      let result
-      if (_initFn) {
-        let fn = _initFn
-        _initFn = null
-        result = fn.call(this, ...args)
+      let arg0 = args[0]
+      if (arg0 && typeof arg0[$$constructor] === 'function') {
+        const {args, [$$constructor]: ctor} = arg0
+        return ctor.apply(this, args)
       } else {
-        result = klass[$$constructor].apply(this, args)
+        return klass[$$constructor].apply(this, args)
       }
-      return result
     })
   })
 
@@ -76,8 +73,7 @@ function generateModel (name) {
 
   klass.initializer = function (initFn) {
     return function (...args) {
-      _initFn = initFn
-      return Reflect.construct(klass, args)
+      return Reflect.construct(klass, [{[$$constructor]: initFn, args}])
     }
   }
 
