@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/matehat/nucleotides.js.git"
+    "url": "git+https://github.com/n9s/nucleotides"
   },
   "keywords": [
     "javascript",
@@ -22,7 +22,7 @@
   "author": "mathieu@damours.org",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/matehat/nucleotides.js/issues"
+    "url": "https://github.com/n9s/nucleotides/issues"
   },
   "standard": {
     "globals": [
@@ -36,7 +36,7 @@
     ],
     "parser": "babel-eslint"
   },
-  "homepage": "https://github.com/matehat/nucleotides.js#readme",
+  "homepage": "https://github.com/n9s/nucleotides#readme",
   "devDependencies": {
     "babel-plugin-transform-builtin-extend": "^1.1.2",
     "babel-polyfill": "^6.23.0",
