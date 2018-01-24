@@ -32,11 +32,6 @@ const DifferenceMixin = Mixin('DifferenceMixin')
 
     return forked
   })
-  .method('$rollback', function (mixin) {
-    let changeset = this.$difference.$getRevertChangeSet()
-    changeset.$applyToObject(this)
-    return this
-  })
   .method('$commitChanges', function () {
     if (this.$original != null || !this.$isPristine) {
       let changeset = this.$difference.$getChangeSet()

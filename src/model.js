@@ -373,6 +373,21 @@ function generateModel (name) {
     }
   })
 
+  klass.method('$rollback', function (mixin) {
+    if (!this.$isPristine) {
+      let changeset = this.$difference.$getRevertChangeSet()
+      changeset.$applyToObject(this)
+    }
+    return this
+  })
+
+  klass.method('$setPristine', function (mixin) {
+    if (!this.$isPristine) {
+      this.$difference.$setPristine()
+    }
+    return this
+  })
+
   const issuesAccessor = function (prop, level) {
     let key = Symbol(prop)
     return function () {
@@ -428,6 +443,7 @@ function generateModel (name) {
     }
     if (base[$$tracking]) {
       this.$startTracking()
+      this.$setPristine()
     }
     if (base[$$validating]) {
       this.$startValidating()

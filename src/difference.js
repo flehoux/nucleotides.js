@@ -177,6 +177,15 @@ class Difference {
     return this.$delta.size === 0
   }
 
+  $setPristine () {
+    let currentData = this.$currentData
+    this.$initialData.clear()
+    for (let name in currentData) {
+      this.$initialData.set(this.$attributesByName.get(name), currentData[name])
+    }
+    this.$delta.clear()
+  }
+
   $destroy () {
     this.$initialData.clear()
     this.$delta.clear()
