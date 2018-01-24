@@ -451,7 +451,7 @@ class Attribute {
     }
     if (this.collection) {
       if (value.length === 0 && this.extra.emptyAsNull === true) {
-        return null
+        return undefined
       } else {
         return value.$clean
       }
@@ -483,11 +483,18 @@ class NestedModelAttribute extends Attribute {
   encode (value) {
     if (this.encoder != null) {
       return this.encoder(value)
-    } else if (value == null) {
-      return value
-    } else {
-      return value.$clean
     }
+    if (value == null) {
+      return value
+    }
+    if (this.collection) {
+      if (value.length === 0 && this.extra.emptyAsNull === true) {
+        return undefined
+      } else {
+        return value.$clean
+      }
+    }
+    return value.$clean
   }
 
   doUpdateInTarget (object, oldValue, nextValue, options) {
