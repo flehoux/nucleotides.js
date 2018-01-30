@@ -240,7 +240,6 @@ function generateProtocol (name) {
 
   protocol.getMiddleware = function (target, name, ...args) {
     const Flow = require('./flow')
-    const Mixin = require('./mixin')
     let fns
     let context = this.contextFor(target)
     fns = this.implementationsFor(context, name)
@@ -250,7 +249,6 @@ function generateProtocol (name) {
 
   protocol.getAsyncMiddleware = function (target, name, ...args) {
     const AsyncFlow = require('./async_flow')
-    const Mixin = require('./mixin')
     let fns
     let context
     context = this.contextFor(target)
@@ -260,7 +258,6 @@ function generateProtocol (name) {
   }
 
   protocol.call = function (target, name, ...args) {
-    const Mixin = require('./mixin')
     let impl
     let context
     context = this.contextFor(target)
@@ -269,7 +266,6 @@ function generateProtocol (name) {
   }
 
   protocol.callAll = function (target, name, ...args) {
-    const Mixin = require('./mixin')
     let context = this.contextFor(target)
     let impls = this.implementationsFor(context, name)
     for (let impl of impls) {
