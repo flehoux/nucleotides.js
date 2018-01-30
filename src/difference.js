@@ -138,6 +138,11 @@ class Difference {
     return changeset
   }
 
+  $setInitial (attribute) {
+    this.$initialData.set(attribute.$$key, attribute.getEncodedValue(this.$object))
+    this.$invalidate()
+  }
+
   $invalidate () {
     delete this[$$current]
   }
