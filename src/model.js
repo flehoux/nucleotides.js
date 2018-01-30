@@ -60,12 +60,15 @@ function generateModel (name) {
 
     return this.$performInTransaction({constructing: true}, () => {
       let arg0 = args[0]
+      let returned
       if (arg0 && typeof arg0[$$constructor] === 'function') {
         const {args, [$$constructor]: ctor} = arg0
-        return ctor.apply(this, args)
+        returned = ctor.apply(this, args)
       } else {
-        return klass[$$constructor].apply(this, args)
+        returned = klass[$$constructor].apply(this, args)
       }
+      this.$startTracking()
+      return returned
     })
   })
 
@@ -357,7 +360,6 @@ function generateModel (name) {
   }
 
   klass.derive('$clean', function () {
-    this.$startTracking()
     if (this.$difference != null) {
       return this.$difference.$currentData
     } else {
@@ -441,10 +443,7 @@ function generateModel (name) {
         this.$isNew = base.$isNew
       }
     }
-    if (base[$$tracking]) {
-      this.$startTracking()
-      this.$setPristine()
-    }
+    this.$setPristine()
     if (base[$$validating]) {
       this.$startValidating()
     }
@@ -516,7 +515,6 @@ function generateModel (name) {
       let changeset
       if (this[$$changed] != null) {
         if (this[$$changed].size > 0 && !tx.constructing) {
-          this.$startTracking()
           changeset = this.$difference.$compare()
           if (changeset.$size > 0) {
             for (let derivedName in this.constructor[$$derived]) {
