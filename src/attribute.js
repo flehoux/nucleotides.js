@@ -408,7 +408,9 @@ class Attribute {
         let oldValue = target.$data[this.name]
         if (oldValue !== nextValue) {
           this.doUpdateInTarget(target, oldValue, nextValue, options)
-          if (!options.initializing) {
+          if (options.initializing && target.$difference) {
+            target.$difference.$setInitial(this)
+          } else {
             target.$didChange(this.name)
           }
         }
