@@ -31,6 +31,16 @@ class MapCollection {
       target.$emit('remove', [oldValue])
     }
 
+    let updateValue = function (target, property, newValue) {
+      let oldValue = target[property]
+      if (oldValue != null) {
+        if (Model.isInstance(newValue)) {
+          newValue = newValue.$clean
+        }
+        oldValue.$updateAttributes(newValue)
+      }
+    }
+
     let proxy = new Proxy(coll, {
       set: function (target, property, value, receiver) {
         if (typeof property === 'symbol') {
@@ -46,10 +56,13 @@ class MapCollection {
         if (!event.canceled) {
           let newValue = event.elements[property]
           target[$$inTransaction](() => {
-            removeValue(target, property)
-            target[property] = newValue
-            target.$emit('add', [newValue])
-            newValue.$addToCollection(target)
+            if (target.hasOwnProperty(property)) {
+              updateValue(target, property, newValue)
+            } else {
+              target[property] = newValue
+              target.$emit('add', [newValue])
+              newValue.$addToCollection(target)
+            }
           })
           return true
         } else {
