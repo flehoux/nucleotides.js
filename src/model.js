@@ -624,7 +624,7 @@ function generateModel (name) {
     $force (name, value) {
       const derived = klass[$$derived][name]
       if (derived == null || !(derived instanceof DerivedValue.Cached)) {
-        throw new Error(`$force was called for a property that wasn't an async derived value: ${name}`)
+        throw new Error(`$force was called for a property that wasn't an cached derived value: ${name}`)
       }
       derived.force(this, value)
     },
