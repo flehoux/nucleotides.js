@@ -51,6 +51,8 @@ let isArray = (!Array.isArray) ? function (arg) {
 } : Array.isArray.bind(Array)
 
 function generateModel (name) {
+  const ValidationSummary = require('./validators/summary')
+
   let klass = factory(name, function (klass, args) {
     TransactionManager.call(this)
     this.constructor = klass
@@ -94,13 +96,18 @@ function generateModel (name) {
       __proto__: null
     },
     List: {
-      get: function () {
+      get () {
         return {model: this, collection: 'array'}
       }
     },
     Map: {
-      get: function () {
+      get () {
         return {model: this, collection: 'map'}
+      }
+    },
+    $validators: {
+      get () {
+        return klass[$$validators]
       }
     }
   })
@@ -131,6 +138,16 @@ function generateModel (name) {
           this[$$selfPromise] = require('..').resolvePromise(this)
         }
         return this[$$selfPromise]
+      }
+    },
+    $validators: {
+      get () {
+        return this[$$validators]
+      }
+    },
+    $isValidating: {
+      get () {
+        return this[$$validating]
       }
     }
   })
@@ -390,32 +407,9 @@ function generateModel (name) {
     return this
   })
 
-  const issuesAccessor = function (prop, level) {
-    let key = Symbol(prop)
-    return function () {
-      if (!this[$$validating]) {
-        return {}
-      }
-      if (!this[key]) {
-        if (this.$forked) {
-          this[key] = Object.create(this.$original[prop], {})
-        } else {
-          this[key] = {}
-        }
-      } else {
-        for (let path in this[key]) {
-          delete this[key][path]
-        }
-      }
-      let newIssues = require('./validator').summarize(this, this[$$validators], level)
-      Object.assign(this[key], newIssues)
-      return this[key]
-    }
-  }
-
-  klass.derive('$errors', {cached: true, source: 'manual'}, issuesAccessor('$errors', Symbol.for('error')))
-  klass.derive('$warnings', {cached: true, source: 'manual'}, issuesAccessor('$warnings', Symbol.for('warning')))
-  klass.derive('$notices', {cached: true, source: 'manual'}, issuesAccessor('$notices', Symbol.for('notice')))
+  ValidationSummary.extendModel(klass, '$errors', Symbol.for('error'))
+  ValidationSummary.extendModel(klass, '$warnings', Symbol.for('warning'))
+  ValidationSummary.extendModel(klass, '$notices', Symbol.for('notice'))
 
   klass.derive('$valid', function () { return Object.keys(this.$errors).length === 0 })
 
