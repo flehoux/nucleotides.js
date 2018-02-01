@@ -247,6 +247,9 @@ class Attribute {
       } else {
         return this.initial
       }
+      if (this.collection && value && value.$model) {
+        return this.encode(value)
+      }
       return value
     } else {
       value = this.getValue(target)
