@@ -635,7 +635,7 @@ function generateModel (name) {
         if (derived == null || !(derived instanceof DerivedValue.Cached)) {
           throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
         }
-        derived.clearCache(this)
+        derived.clearCache(this, true)
       }
     },
 
@@ -645,7 +645,7 @@ function generateModel (name) {
         if (derived == null || !(derived instanceof DerivedValue.Cached)) {
           throw new Error(`$clear was called for a property that wasn't a cached derived value: ${name}`)
         }
-        derived.clearCache(this, false)
+        derived.clearCache(this)
       }
     },
 
