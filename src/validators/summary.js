@@ -5,19 +5,11 @@ const $$views = Symbol('views')
 const $$keys = Symbol('keys')
 
 module.exports = class ValidationSummary {
-  static getPlaceholder (level) {
-    if (!this[level]) {
-      this[level] = new ValidationSummary(level)
-      Object.freeze(this[level])
-    }
-    return this[level]
-  }
-
   static extendModel (model, property, level) {
     let Summary = this
     let accessorFn = function (summary) {
       if (!this.$isValidating) {
-        return Summary.getPlaceholder(level)
+        return new ValidationSummary(level)
       }
       if (!summary) {
         if (this.$forked) {

@@ -134,7 +134,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
   }
 
   clearCache (object, reensure = false) {
-    if (reensure) {
+    if (reensure && object.hasOwnProperty(this.$$cache)) {
       this.ensure(object, null, true)
     } else {
       delete object[this.$$cache]
