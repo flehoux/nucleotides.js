@@ -133,9 +133,13 @@ class AsyncDerivedValue extends CachedDerivedValue {
     this.$$promise = Symbol('promise')
   }
 
-  clearCache (object) {
-    delete object[this.$$cache]
-    delete object[this.$$promise]
+  clearCache (object, reensure = false) {
+    if (reensure) {
+      this.ensure(object, null, true)
+    } else {
+      delete object[this.$$cache]
+      delete object[this.$$promise]
+    }
   }
 
   force (object, value) {
@@ -160,7 +164,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
 
   update (object, changeset) {
     if (this.fetched(object) && this.options.reensure !== false) {
-      this.ensure(object, changeset)
+      this.ensure(object, changeset, true)
     } else {
       this.clearCache(object)
     }
@@ -170,9 +174,9 @@ class AsyncDerivedValue extends CachedDerivedValue {
     return object.hasOwnProperty(this.$$cache)
   }
 
-  ensure (object, changeset) {
+  ensure (object, changeset, force = false) {
     let derived = this
-    if (object.hasOwnProperty(derived.$$promise)) {
+    if (!force && object.hasOwnProperty(derived.$$promise)) {
       return object[derived.$$promise]
     }
     let result = this.getter.call(object, object[this.$$cache], changeset)
