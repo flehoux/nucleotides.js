@@ -411,7 +411,7 @@ function generateModel (name) {
   ValidationSummary.extendModel(klass, '$warnings', Symbol.for('warning'))
   ValidationSummary.extendModel(klass, '$notices', Symbol.for('notice'))
 
-  klass.derive('$valid', function () { return Object.keys(this.$errors).length === 0 })
+  klass.derive('$valid', function () { return this.$errors.$length === 0 })
 
   const cloneFn = klass.initializer(function (base, isNew) {
     for (let name in klass[$$attributes]) {

@@ -15,21 +15,20 @@ module.exports = class ValidationSummary {
 
   static extendModel (model, property, level) {
     let Summary = this
-    let key = Symbol(property)
-    let accessorFn = function () {
+    let accessorFn = function (summary) {
       if (!this.$isValidating) {
         return Summary.getPlaceholder(level)
       }
-      if (!this[key]) {
+      if (!summary) {
         if (this.$forked) {
-          this[key] = this.$original[property].$extend()
+          summary = this.$original[property].$extend()
         } else {
-          this[key] = new Summary(level)
+          summary = new Summary(level)
         }
       }
       let newIssues = require('../validator').summarize(this, this.$validators, level)
-      this[key].$update(newIssues)
-      return this[key]
+      summary.$update(newIssues)
+      return summary
     }
     model.derive(property, {cached: true, source: 'manual'}, accessorFn)
   }
@@ -52,6 +51,10 @@ module.exports = class ValidationSummary {
     }
   }
 
+  get $length () {
+    return this[$$keys].size
+  }
+
   $clear () {
     this[$$views].clear()
     this[$$keys].clear()
@@ -65,8 +68,8 @@ module.exports = class ValidationSummary {
     }
     this.$clear()
     for (let key in issues) {
-      this[$$keys].add(key)
       if (!startsWith(key, '$')) {
+        this[$$keys].add(key)
         Object.defineProperty(this, key, {
           value: issues[key],
           configurable: true,
@@ -77,7 +80,10 @@ module.exports = class ValidationSummary {
   }
 
   $extend (issues = {}) {
-    return Object.create(this, {issues, views: new Map()})
+    let newSummary = Object.create(this)
+    newSummary[$$keys] = new Set()
+    newSummary[$$views] = new Map()
+    return newSummary
   }
 
   $onlyFor (prefix) {
