@@ -175,7 +175,7 @@ function generateProtocol (name) {
     } else if (Model.isInstance(object)) {
       return object.constructor
     } else {
-      throw new TypeError('Tried to use an object that is neither a nucleotides Model, nor an instance of a Model.', )
+      throw new TypeError('Tried to use an object that is neither a nucleotides Model, nor an instance of a Model.')
     }
   }
 
