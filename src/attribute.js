@@ -194,7 +194,13 @@ class Attribute {
   }
 
   clone (source, target) {
-    this.setInitialValue(target, this.getEncodedValue(source))
+    const Model = require('./model')
+    let value = this.getValue(source)
+    if (value != null && Model.isInstance(value)) {
+      this.setInitialValue(target, value.$clone())
+    } else {
+      this.setInitialValue(target, this.getEncodedValue(source))
+    }
   }
 
   parseOptions (options) {
