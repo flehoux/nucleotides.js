@@ -100,9 +100,12 @@ function generateProtocol (name) {
         let impls = []
         for (let model of protocol.supportingModels()) {
           for (let impl of protocol.implementationsFor(model, name)) {
-            impls.push(impl.bind(model))
+            let fn = impl.bind(model)
+            fn[$$priority] = impl[$$priority]
+            impls.push(fn)
           }
         }
+        impls.sort((a, b) => b[$$priority] - a[$$priority])
         if (options.mode === 'async_flow') {
           const AsyncFlow = require('./async_flow')
           return new AsyncFlow(impls, ...args)
