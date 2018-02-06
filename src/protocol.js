@@ -202,14 +202,19 @@ function generateProtocol (name) {
     return context[protocol[name].symbol] != null
   }
 
-  protocol.valueFor = function (object, name, defaultValue) {
+  protocol.valueFor = function (object, name, defaultValue = null) {
     if (!protocol[$$values].has(name)) {
-      throw new ProtocolError(`Protocol ${protocol.name} does not define value ${name}`, name)
+      if (defaultValue == null) {
+        throw new ProtocolError(`Protocol ${protocol.name} does not define value ${name}`, name)
+      }
+      return defaultValue
     }
-    let context = this.modelFor(this.contextFor(object))
-    if (context.hasOwnProperty(protocol[name].symbol)) {
-      return context[protocol[name].symbol]
-    }
+    try {
+      let context = this.modelFor(this.contextFor(object))
+      if (context.hasOwnProperty(protocol[name].symbol)) {
+        return context[protocol[name].symbol]
+      }
+    } catch (err) {}
     return defaultValue
   }
 
