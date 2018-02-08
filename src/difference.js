@@ -186,7 +186,7 @@ class Difference {
     let currentData = this.$currentData
     this.$initialData.clear()
     for (let name in currentData) {
-      this.$initialData.set(this.$attributesByName.get(name), currentData[name])
+      this.$initialData.set(this.$attributesByName.get(name).$$key, currentData[name])
     }
     this.$delta.clear()
   }
