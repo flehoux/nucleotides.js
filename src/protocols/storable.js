@@ -24,7 +24,7 @@ Object.assign(Storable, {
   },
   encode: function (object, options) {
     if (object.constructor.implements(this.encoder)) {
-      return this.encoder(object)
+      return this.encoder(object, options)
     } else {
       return object.$clean
     }
