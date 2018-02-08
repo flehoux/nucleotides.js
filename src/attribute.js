@@ -195,7 +195,7 @@ class Attribute {
 
   clone (source, target) {
     const Model = require('./model')
-    let value = this.getValue(source)
+    let value = source.$data[this.name]
     if (value != null && Model.isInstance(value)) {
       this.setInitialValue(target, value.$clone())
     } else {
@@ -260,13 +260,9 @@ class Attribute {
       }
       return value
     } else {
-      value = this.getValue(target)
+      value = target.$data[this.name]
     }
     return this.encode(value)
-  }
-
-  getValue (target) {
-    return target.$data[this.name]
   }
 
   setInitialValue (target, value) {
@@ -304,6 +300,7 @@ class Attribute {
     target.$lazyData[this.$$key] = {}
     Object.defineProperty(target, this.name, {
       enumerable: true,
+      configurable: true,
       set: this.setterFor(target),
       get: this.getterFor(target)
     })
@@ -315,7 +312,7 @@ class Attribute {
       if (this.$lazyData[attribute.$$key]) {
         attribute.initializeInTarget(this)
       }
-      return attribute.getValue(this)
+      return this.$data[attribute.name]
     }
   }
 
@@ -334,7 +331,7 @@ class Attribute {
     if (target.$lazyData[this.$$key]) {
       return target.$lazyData[this.$$key].value
     } else {
-      return this.getValue(target)
+      return target.$data[this.name]
     }
   }
 
@@ -349,6 +346,13 @@ class Attribute {
       value = this.initial
     }
     delete target.$lazyData[this.$$key]
+    let attribute = this
+    Object.defineProperty(target, this.name, {
+      enumerable: true,
+      configurable: false,
+      set (value) { attribute.updateValue(this, value) },
+      get () { return this.$data[attribute.name] }
+    })
     return target.$performInTransaction(() => {
       if (this.collection !== false) {
         this.initializeCollectionInTarget(target, value, {initializing: true})
@@ -482,7 +486,7 @@ class NestedModelAttribute extends Attribute {
         this.initializeInTarget(target)
         target.$data[this.name].$updateAll(source.$data[this.name])
       } else {
-        this.initializeInTarget(target, this.getValue(source))
+        this.initializeInTarget(target, source.$data[this.name])
       }
     } else {
       this.setInitialValue(target, this.getEncodedValue(source))
