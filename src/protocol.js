@@ -11,6 +11,7 @@ const $$supportedBy = Symbol('supportedBy')
 
 const factory = require('./create')
 const EventEmitter = require('./emitter')
+const get = require('lodash.get')
 
 class ProtocolError extends Error {
   constructor (message, key) {
@@ -71,7 +72,40 @@ function generateProtocol (name) {
       defaultImpl = options.default
     }
     let method
-    if (options.mode === 'single') {
+    let symbol = Symbol(`${protocol.name}.${name}`)
+
+    if (options.mode === 'cached') {
+      method = function (target) {
+        let context = this.contextFor(target)
+        return context[symbol]
+      }
+    } else if (options.mode === 'async') {
+      let promiseKey = Symbol(`${protocol.name}.${name}.promise`)
+      method = function (target) {
+        let context = this.contextFor(target)
+        let existingPromise = context[promiseKey]
+        let ensurePromise = context.$ensure(symbol)
+
+        if (existingPromise != null) {
+          if (existingPromise[promiseKey] !== ensurePromise) {
+            existingPromise = null
+          }
+        }
+        if (existingPromise == null) {
+          let promise = ensurePromise.then(context => {
+            promise.$value = context[symbol]
+            return context[symbol]
+          })
+          promise.$value = get(options, 'placeholder', null)
+          promise[promiseKey] = ensurePromise
+          context[promiseKey] = promise
+        }
+        return context[promiseKey]
+      }
+      method.invalidate = function (target, ...args) {
+        target.$invalidate(symbol, ...args)
+      }
+    } else if (options.mode === 'single') {
       method = function (target, ...args) {
         return protocol.call(target, name, ...args)
       }
@@ -88,7 +122,7 @@ function generateProtocol (name) {
         return protocol.getAsyncMiddleware(target, name, ...args).run()
       }
     }
-    let symbol = Symbol(`${protocol.name}.${name}`)
+
     Object.assign(method, {
       hook,
       defaultImpl,
@@ -332,14 +366,22 @@ function generateProtocol (name) {
 
   protocol.augmentModelWithImplementation = function (model, item, fn) {
     this.augmentModel(model)
-    const {hook, symbol} = item
+    const {hook, symbol, options} = item
     const isNew = model[symbol] == null
     if (isNew) {
-      model[symbol] = [fn]
       hook.call(protocol, model)
+    }
+    if (options.mode === 'cached') {
+      model.derive(symbol, {cached: true, source: options.source}, fn)
+    } else if (options.mode === 'async') {
+      model.derive(symbol, {async: true, source: options.source}, fn)
     } else {
-      model[symbol].push(fn)
-      model[symbol].sort((a, b) => b[$$priority] - a[$$priority])
+      if (isNew) {
+        model[symbol] = [fn]
+      } else {
+        model[symbol].push(fn)
+        model[symbol].sort((a, b) => b[$$priority] - a[$$priority])
+      }
     }
   }
 

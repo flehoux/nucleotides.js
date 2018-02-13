@@ -480,7 +480,7 @@ function generateModel (name) {
       this.$emit('startValidating')
     },
 
-    $updateAttributes (data, options) {
+    $updateAttributes (data, options = {}) {
       if (Model.isInstance(data)) {
         data = data.$clean
       }
@@ -488,6 +488,9 @@ function generateModel (name) {
         for (const attributeName in data) {
           if (attributeName in klass.attributes()) {
             klass.attribute(attributeName).updateValue(this, data[attributeName], options)
+          }
+          if (options.force === true) {
+            this.$didChange(attributeName)
           }
         }
       })
@@ -587,7 +590,7 @@ function generateModel (name) {
         } else {
           const derived = klass[$$derived][name]
           if (derived == null) {
-            if (name.indexOf('.') !== -1) {
+            if (_.isString(name) && name.indexOf('.') !== -1) {
               let value = get(this, name)
               if (value != null) {
                 promise = this.$selfPromise
@@ -602,11 +605,11 @@ function generateModel (name) {
                 promise = this[symbol]
               }
             } else if (!(derived instanceof DerivedValue.Async)) {
-              throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
+              throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name.toString()}`)
             }
           } else if (!(derived instanceof DerivedValue.Async)) {
-            throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name}`)
-          } else if (!derived.fetched(this)) {
+            throw new Error(`$ensure was called for a property that wasn't an async derived value: ${name.toString()}`)
+          } else {
             promise = derived.ensure(this)
           }
         }
@@ -614,11 +617,13 @@ function generateModel (name) {
           promises.push(promise)
         }
       }
-      if (promises.length > 0) {
-        return allPromise(promises).then(() => this)
-      } else {
+      if (promises.length === 0) {
         return this.$selfPromise
       }
+      if (promises.length === 1) {
+        return promises[0]
+      }
+      return allPromise(promises).then(() => this)
     },
 
     $force (name, value) {
