@@ -13,7 +13,7 @@ const DifferenceMixin = Mixin('DifferenceMixin')
         get () { return original }
       },
       $forked: {
-        get () { return true }
+        get () { return original != null }
       }
     })
 
