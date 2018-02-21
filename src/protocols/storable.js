@@ -23,6 +23,11 @@ Object.assign(Storable, {
     }
   },
   encode: function (object, options) {
+    if (object instanceof require('../emitting_array')) {
+      return object.$clean
+    } else if (object instanceof require('../collection/map_collection')) {
+      return object.$clean
+    }
     if (object.constructor.implements(this.encoder)) {
       return this.encoder(object, options)
     } else {

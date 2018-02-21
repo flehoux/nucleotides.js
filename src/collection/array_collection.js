@@ -77,7 +77,7 @@ class ArrayCollection extends EmittingArray {
   get $clean () {
     let results = []
     for (let item of this) {
-      results.push(item.$clean)
+      results.push(require('../protocols/storable').encode(item))
     }
     return results
   }

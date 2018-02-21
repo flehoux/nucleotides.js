@@ -139,7 +139,7 @@ class MapCollection {
   get $clean () {
     let results = {}
     for (let key of Object.keys(this)) {
-      results[key] = this[key].$clean
+      results[key] = require('../protocols/storable').encode(this[key])
     }
     return results
   }

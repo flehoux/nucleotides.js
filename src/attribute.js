@@ -470,7 +470,7 @@ class Attribute {
       if (value.length === 0 && this.extra.emptyAsNull === true) {
         return undefined
       } else {
-        return value.$clean
+        return require('./protocols/storable').encode(value)
       }
     }
     return value
