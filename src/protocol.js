@@ -373,8 +373,10 @@ function generateProtocol (name) {
     }
     if (options.mode === 'cached') {
       model.derive(symbol, {cached: true, source: options.source}, fn)
+      model[symbol] = 'cached'
     } else if (options.mode === 'async') {
       model.derive(symbol, {async: true, source: options.source}, fn)
+      model[symbol] = 'async'
     } else {
       if (isNew) {
         model[symbol] = [fn]
