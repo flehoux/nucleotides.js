@@ -597,9 +597,9 @@ function generateModel (name) {
               } else {
                 let symbol = Symbol.for(`Promise:${name}`)
                 if (this[symbol] == null) {
-                  this[symbol] = this.$ensure(name.split('.')).then((ret) => {
+                  this[symbol] = this.$ensure(name.split('.')).then(() => {
                     delete this[symbol]
-                    return ret
+                    return this
                   })
                 }
                 promise = this[symbol]
