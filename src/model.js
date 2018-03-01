@@ -535,22 +535,22 @@ function generateModel (name) {
       const {allPromise} = require('..')
       this.$startValidating()
 
-      if (keys instanceof Array) {
+      if (isArray(keys)) {
         keys = new Set(keys)
       } else if (!(keys instanceof Set)) {
         keys = new Set([keys])
       }
 
-      let shouldWait = false
       for (let validator of this[$$validators]) {
-        if ((constructing && validator.shouldValidateAtCreation) || validator.shouldValidate(keys)) {
-          shouldWait = true
+        if ((constructing && validator.shouldValidateAtCreation) ||
+            validator.shouldValidate(keys) ||
+            keys.has(validator.constructor)) {
           promises.push(validator.runValidation(this, data))
         }
       }
 
-      if (!shouldWait) {
-        return Promise.resolve(null)
+      if (promises.length === 0) {
+        return this.$selfPromise
       }
 
       return allPromise(promises).then((result) => {
@@ -569,6 +569,7 @@ function generateModel (name) {
         if (union.has(Symbol.for('notice'))) {
           this.$invalidate('$notices')
         }
+        return this
       })
     },
 
