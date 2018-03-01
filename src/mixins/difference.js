@@ -1,4 +1,5 @@
 const {Mixin} = require('../..')
+const $$skippingRebound = Symbol('skippingRebound')
 
 const DifferenceMixin = Mixin('DifferenceMixin')
   .method('$fork', function () {
@@ -18,7 +19,7 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     })
 
     let applyDeltaFn = function (changeset) {
-      if (original != null && changeset.$size > 0) {
+      if (original != null && changeset.$size > 0 && forked[$$skippingRebound] !== true) {
         forked.$difference.$applyToInitial(changeset)
       }
     }
@@ -36,8 +37,11 @@ const DifferenceMixin = Mixin('DifferenceMixin')
     if (this.$original != null || !this.$isPristine) {
       let changeset = this.$difference.$getChangeSet()
       if (changeset.$size > 0) {
+        this[$$skippingRebound] = true
         changeset.$applyToObject(this.$original)
+        delete this[$$skippingRebound]
       }
+      this.$difference.$setPristine()
     }
     return this
   })
