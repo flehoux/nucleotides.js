@@ -78,7 +78,7 @@ class CachedDerivedValue extends DerivedValue {
   }
 
   clearCache (object) {
-    delete object[this.$$cache]
+    this.update(object)
   }
 
   force (object, value) {
@@ -122,7 +122,7 @@ class CachedDerivedValue extends DerivedValue {
     if (this.options.eager === true || object.hasOwnProperty(this.$$cache)) {
       this.cache(object, changeset)
     } else {
-      this.clearCache(object)
+      delete object[this.$$cache]
     }
   }
 }

@@ -7,16 +7,19 @@ const $$keys = Symbol('keys')
 module.exports = class ValidationSummary {
   static extendModel (model, property, level) {
     let Summary = this
+    let createFn = function () {
+      if (this.$forked) {
+        return this.$original[property].$extend()
+      } else {
+        return new Summary(level, property)
+      }
+    }
     let accessorFn = function (summary) {
       if (!this.$isValidating) {
-        return new ValidationSummary(level)
+        return createFn.call(this)
       }
       if (!summary) {
-        if (this.$forked) {
-          summary = this.$original[property].$extend()
-        } else {
-          summary = new Summary(level)
-        }
+        summary = createFn.call(this)
       }
       let newIssues = require('../validator').summarize(this, this.$validators, level)
       summary.$update(newIssues)
@@ -25,10 +28,11 @@ module.exports = class ValidationSummary {
     model.derive(property, {cached: true, source: 'manual'}, accessorFn)
   }
 
-  constructor (level) {
+  constructor (level, key) {
     this[$$level] = level
     this[$$views] = new Map()
     this[$$keys] = new Set()
+    Object.defineProperty(this, '$level', {value: key})
   }
 
   $includes (key) {
@@ -75,6 +79,7 @@ module.exports = class ValidationSummary {
     let newSummary = Object.create(this)
     newSummary[$$keys] = new Set()
     newSummary[$$views] = new Map()
+    Object.defineProperty(this, '$level', {value: this.$level})
     return newSummary
   }
 
@@ -86,7 +91,7 @@ module.exports = class ValidationSummary {
           issues[path.slice(prefix.length + 1)] = this[path]
         }
       }
-      let subSummary = new ValidationSummary(this.level)
+      let subSummary = new ValidationSummary(this.level, this.$level)
       subSummary.$update(issues)
       this[$$views].set(prefix, subSummary)
     }
