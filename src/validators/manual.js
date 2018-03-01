@@ -14,6 +14,10 @@ const ManualValidator = (...keys) => class extends Validator {
     return false
   }
 
+  static get key () {
+    return keys[0]
+  }
+
   shouldValidate (validatedKeys) {
     return keys.some(key => validatedKeys.has(key))
   }
