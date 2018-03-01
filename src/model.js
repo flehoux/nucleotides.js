@@ -421,7 +421,7 @@ function generateModel (name) {
     let {Cached: CachedDerivedValue} = require('./derived')
     for (let name in klass[$$derived]) {
       let derived = klass[$$derived][name]
-      if (derived instanceof CachedDerivedValue) {
+      if (derived instanceof CachedDerivedValue && derived.options.clone !== false) {
         let value = base[derived.$$cache]
         if (Model.isInstance(value)) {
           derived.force(this, value.$clone())
