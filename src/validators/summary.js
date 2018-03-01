@@ -81,9 +81,9 @@ module.exports = class ValidationSummary {
   $onlyFor (prefix) {
     if (!this[$$views].has(prefix)) {
       let issues = {}
-      for (let path of this) {
+      for (let path in this) {
         if (typeof path === 'string' && startsWith(path, prefix)) {
-          issues[path.slice(prefix.length)] = this[path]
+          issues[path.slice(prefix.length + 1)] = this[path]
         }
       }
       let subSummary = new ValidationSummary(this.level)
