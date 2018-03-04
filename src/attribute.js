@@ -55,10 +55,10 @@ const GENERATORS = {
     const Model = require('./model')
     return function (value) {
       if (Model.isInstance(value, type)) {
-        if (value.$parent != null) {
+        if (value.$parent == null) {
           return value
         } else {
-          value = value.$clean
+          return value.$clone()
         }
       }
       return Reflect.construct(type, [value])
