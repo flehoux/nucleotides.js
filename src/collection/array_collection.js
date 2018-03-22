@@ -15,6 +15,7 @@ const EmittingArray = require('../emitting_array')
 const Model = require('../model')
 const Collectable = require('../protocols/collectable')
 const Identifiable = require('../protocols/identifiable')
+const Mountable = require('../mixins/mountable')
 const get = require('lodash.get')
 
 class ArrayCollection extends EmittingArray {
@@ -37,6 +38,11 @@ class ArrayCollection extends EmittingArray {
     this.$on('add', function (elements) {
       for (let element of elements) {
         element.$addToCollection(this)
+      }
+    })
+    this.$on('remove', function (elements) {
+      for (let element of elements) {
+        element.$removeFromCollection()
       }
     })
     this[$$map] = {}
@@ -317,15 +323,17 @@ class ArrayCollection extends EmittingArray {
     let {elements} = event
     let newElements = []
     for (let element of elements) {
-      if (element instanceof this.$model && element.$collection != null && element.$collection !== this) {
-        element = element.$clone()
-      }
-      if (!(element instanceof this.$model)) {
-        element = Reflect.construct(this.$model, [element])
-      }
-      let result = this.$$prepareElement(element)
-      if (Model.isInstance(result, element.constructor)) {
-        element = result
+      if (this.$model != null) {
+        if (element instanceof this.$model && element.$collection != null && element.$collection !== this) {
+          element = element.$clone()
+        }
+        if (!(element instanceof this.$model)) {
+          element = Reflect.construct(this.$model, [element])
+        }
+        let result = this.$$prepareElement(element)
+        if (Model.isInstance(result, element.constructor)) {
+          element = result
+        }
       }
       if (!this.$passesFilters(element)) {
         continue
@@ -346,5 +354,7 @@ class ArrayCollection extends EmittingArray {
     return Array.prototype.slice.call(this, ...args)
   }
 }
+
+Mountable(ArrayCollection)
 
 module.exports = ArrayCollection

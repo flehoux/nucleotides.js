@@ -26,6 +26,7 @@ const TransactionManager = require('./transaction')
 const factory = require('./create')
 const Protocol = require('./protocol')
 const Difference = require('./difference')
+const Mountable = require('./mixins/mountable')
 
 let Model
 
@@ -75,6 +76,7 @@ function generateModel (name) {
   })
 
   klass.prototype = new TransactionManager()
+  Mountable(klass)
 
   klass.initializer = function (initFn) {
     return function (...args) {
@@ -665,15 +667,33 @@ function generateModel (name) {
       }
     },
 
-    $addToCollection (collection) {
-      if (this[$$collection] == null) {
-        this[$$collection] = collection
-        collection.$on('destroy', this.$destroy)
-      } else if (this[$$collection] !== collection) {
-        throw new Error('Cannot change an object\'s containing collection')
+    $unsetParent () {
+      if (this[$$parent] != null) {
+        this[$$parent].$off('destroy', this.$destroy)
+        delete this[$$parent]
+        delete this[$$parentLocation]
       }
+    },
+
+    $addToCollection (collection) {
+      if (this[$$collection] != null && this[$$collection] !== collection) {
+        console.warn('Changing an object\'s containing collection')
+        this.$removeFromCollection()
+      }
+      this[$$collection] = collection
+      collection.$on('destroy', this.$destroy)
       if (collection.$parent) {
         this.$setParent(collection.$parent)
+      }
+    },
+
+    $removeFromCollection () {
+      if (this[$$collection] != null) {
+        if (this[$$collection].$parent != null) {
+          this.$unsetParent(this[$$collection].$parent)
+        }
+        this[$$collection].$off('destroy', this.$destroy)
+        delete this[$$collection]
       }
     },
 

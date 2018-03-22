@@ -15,6 +15,7 @@ const EventEmitter = require('../emitter')
 const Model = require('../model')
 const Collectable = require('../protocols/collectable')
 const Identifiable = require('../protocols/identifiable')
+const Mountable = require('../mixins/mountable')
 const get = require('lodash.get')
 
 class MapCollection {
@@ -348,5 +349,6 @@ class MapCollection {
 }
 
 EventEmitter.mixin(MapCollection)
+Mountable(MapCollection)
 
 module.exports = MapCollection
