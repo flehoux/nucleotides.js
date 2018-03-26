@@ -123,9 +123,9 @@ function doSave (...args) {
   let promise = Queryable.store(this, ...args)
   return promise.then((resp) => {
     if (this.$isNew) {
+      this.$isNew = false
       this.constructor.$emit('created', this)
     }
-    this.$isNew = false
     this.$emit('saved')
     this.constructor.$emit('saved', this)
 

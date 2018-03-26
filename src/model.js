@@ -487,6 +487,10 @@ function generateModel (name) {
         data = data.$clean
       }
       this.$performInTransaction(() => {
+        if ('isNew' in options && options.isNew != null) {
+          this.$isNew = options.isNew
+        }
+
         for (const attributeName in data) {
           if (attributeName in klass.attributes()) {
             klass.attribute(attributeName).updateValue(this, data[attributeName], options)

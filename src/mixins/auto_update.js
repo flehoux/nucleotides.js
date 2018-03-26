@@ -59,7 +59,7 @@ function autoUpdateCollection (mixin) {
     switch (operation) {
       case 'saved':
       case 'created':
-        collection.$update(source.$clean, {skipDifference: true, upsert: true})
+        collection.$update(source.$clean, {skipDifference: true, upsert: true, isNew: source.$isNew})
         break
 
       case 'removed':
