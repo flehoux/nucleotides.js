@@ -62,6 +62,13 @@ class ArrayCollection extends EmittingArray {
     return newCollection
   }
 
+  ensure (...names) {
+    let promises = this.map((item) => item.$ensure(...names))
+    this.$addTransform((item) => item.$ensure(...names))
+    let {allPromise} = require('../..')
+    return allPromise(promises).then(() => this)
+  }
+
   filter (fn, thisArg) {
     let newCollection = ArrayCollection.create(this.$model)
     let items = []

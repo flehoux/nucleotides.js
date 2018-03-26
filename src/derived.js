@@ -75,6 +75,8 @@ class CachedDerivedValue extends DerivedValue {
 
   cache (object, changeset) {
     object[this.$$cache] = this.getter.call(object, object[this.$$cache], changeset)
+    object.$emit('resolved', this.name, object[this.$$cache])
+    object.constructor.$emit('resolved', object, this.name, object[this.$$cache])
   }
 
   clearCache (object) {
@@ -83,6 +85,8 @@ class CachedDerivedValue extends DerivedValue {
 
   force (object, value) {
     object[this.$$cache] = value
+    object.$emit('resolved', this.name, value)
+    object.constructor.$emit('resolved', object, this.name, value)
   }
 
   augmentModel (klass) {
