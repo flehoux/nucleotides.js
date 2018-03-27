@@ -179,7 +179,7 @@ const Queryable = Protocol('Queryable')
     model.prototype.$save = doSave
     Object.defineProperty(model.prototype, '$isNew', {
       get: function () {
-        return this[$$isNew] == null || this[$$isNew] === true
+        return this[$$isNew] === true
       },
       set: function (isNew) {
         this[$$isNew] = (isNew === true)
