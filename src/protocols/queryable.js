@@ -102,21 +102,19 @@ function doDelete (...args) {
   })
 }
 
-function doCreate (...args) {
-  let options = args.pop()
-  if (options.autoSave == null) {
-    args.push(options)
-    options = {autoSave: true}
-  }
+function doNew (...args) {
   let object = Reflect.construct(this, args)
-  if (options.autoSave === true) {
-    let promise = object.$save().then(function (resp) {
-      return object
-    })
-    promise.$result = object
-    return promise
-  }
+  object.$isNew = true
   return object
+}
+
+function doCreate (...args) {
+  let object = this.new(args)
+  let promise = object.$save().then(function (resp) {
+    return object
+  })
+  promise.$result = object
+  return promise
 }
 
 function doSave (...args) {
@@ -175,11 +173,12 @@ const Queryable = Protocol('Queryable')
     model.prototype.$remove = doDelete
   })
   .method('store', {mode: 'async_flow'}, function (model) {
+    model.new = doNew
     model.create = doCreate
     model.prototype.$save = doSave
     Object.defineProperty(model.prototype, '$isNew', {
       get: function () {
-        return this[$$isNew] == null || this[$$isNew] === true
+        return this[$$isNew] === true
       },
       set: function (isNew) {
         this[$$isNew] = (isNew === true)

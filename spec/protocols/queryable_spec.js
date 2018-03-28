@@ -32,6 +32,13 @@ describe('A model defined with a storage implementation', function () {
       flow.resolve(new Protocol.Queryable.Success(true))
     })
 
+  it('should be able to create an instance with Person.new()', function (done) {
+    let object = Person.new({nas: '1', firstName: 'John', lastName: 'Smith'})
+    expect(object.firstName).toBe('John')
+    expect(object.$isNew).toBe(true)
+    done()
+  })
+
   it('should be able to create and store data for an instance with Person.create()', function (done) {
     Person.create({nas: '1', firstName: 'John', lastName: 'Smith'}).then(function (object) {
       expect(storage['1'].firstName).toBe('John')
