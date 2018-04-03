@@ -28,6 +28,10 @@ Object.assign(Storable, {
     } else if (object instanceof require('../collection/map_collection')) {
       return object.$clean
     }
+    const {Model} = require('../..')
+    if (!Model.isModel(object.constructor)) {
+      return object
+    }
     if (object.constructor.implements(this.encoder)) {
       return this.encoder(object, options)
     } else {
