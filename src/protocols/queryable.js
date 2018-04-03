@@ -173,8 +173,8 @@ const Queryable = Protocol('Queryable')
     model.prototype.$remove = doDelete
   })
   .method('store', {mode: 'async_flow'}, function (model) {
-    model.new = doNew
-    model.create = doCreate
+    model.new = doNew.bind(model)
+    model.create = doCreate.bind(model)
     model.prototype.$save = doSave
     Object.defineProperty(model.prototype, '$isNew', {
       get: function () {
