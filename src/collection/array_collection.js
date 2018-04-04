@@ -73,7 +73,11 @@ class ArrayCollection extends EmittingArray {
     let newCollection = ArrayCollection.create(this.$model)
     let items = []
     for (let item of super.filter(fn, thisArg)) {
-      items.push(item.$clone())
+      let newItem = item.$clone()
+      if (item.$parent) {
+        newItem.$setParent(item.$parent)
+      }
+      items.push(newItem)
     }
     newCollection.push(...items)
     for (let filterFn of this.$filters) {
