@@ -52,7 +52,15 @@ class DerivedValue {
     })
   }
 
-  maybeUpdate () {}
+  shouldUpdate () {
+    return false
+  }
+
+  maybeUpdate (klass, object, changeset) {
+    if (this.shouldUpdate(klass, object, changeset)) {
+      this.update(object, changeset)
+    }
+  }
 }
 
 class CachedDerivedValue extends DerivedValue {
@@ -109,17 +117,17 @@ class CachedDerivedValue extends DerivedValue {
     })
   }
 
-  maybeUpdate (klass, object, changeset) {
+  shouldUpdate (klass, object, changeset) {
     if (Array.isArray(this.options.source) && this.options.source.length > 0) {
       for (let attributeName of this.options.source) {
         if (changeset.$keys.has(attributeName)) {
-          this.update(object, changeset)
-          return
+          return true
         }
       }
     } else if (this.options.source == null || this.options.source === 'all') {
-      this.update(object, changeset)
+      return true
     }
+    return false
   }
 
   update (object, changeset) {

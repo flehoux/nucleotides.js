@@ -514,15 +514,34 @@ function generateModel (name) {
       TransactionManager.prototype.$beforeTransaction.call(this, tx)
     },
 
+    $invalidateDerivedValues (changeset, derivedValues = []) {
+      let invalidated = []
+      for (let derivedName in this.constructor[$$derived]) {
+        let derivedValue = this.constructor[$$derived][derivedName]
+        if (derivedValue.shouldUpdate(this.constructor, this, changeset)) {
+          if (derivedValues.indexOf(derivedValue) === -1) {
+            invalidated.push(derivedValue)
+            changeset.$keys.add(derivedName)
+          }
+        }
+      }
+      if (invalidated.length !== 0) {
+        derivedValues.push(...invalidated)
+        this.$invalidateDerivedValues(changeset, derivedValues)
+      } else {
+        for (let derivedValue of derivedValues) {
+          derivedValue.update(this, changeset)
+        }
+      }
+    },
+
     $afterTransaction (tx) {
       let changeset
       if (this[$$changed] != null) {
         if (this[$$changed].size > 0 && !tx.constructing) {
           changeset = this.$difference.$compare()
           if (changeset.$size > 0) {
-            for (let derivedName in this.constructor[$$derived]) {
-              this.constructor[$$derived][derivedName].maybeUpdate(this.constructor, this, changeset)
-            }
+            this.$invalidateDerivedValues(changeset, [])
             this.constructor.$emit('update', this, changeset)
             this.$emit('update', changeset)
             this.$validate(this[$$changed])
