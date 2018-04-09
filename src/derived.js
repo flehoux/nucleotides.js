@@ -67,6 +67,7 @@ class CachedDerivedValue extends DerivedValue {
   constructor (name, options, getter) {
     super(name, options, getter)
     this.$$cache = Symbol('cache')
+    this.$$invalidated = Symbol('invalidated')
   }
 
   prepareDefaults () {
@@ -83,6 +84,7 @@ class CachedDerivedValue extends DerivedValue {
 
   cache (object, changeset) {
     object[this.$$cache] = this.getter.call(object, object[this.$$cache], changeset)
+    delete object[this.$$invalidated]
     object.$emit('resolved', this.name, object[this.$$cache])
     object.constructor.$emit('resolved', object, this.name, object[this.$$cache])
   }
@@ -93,6 +95,7 @@ class CachedDerivedValue extends DerivedValue {
 
   force (object, value) {
     object[this.$$cache] = value
+    delete object[this.$$invalidated]
     object.$emit('resolved', this.name, value)
     object.constructor.$emit('resolved', object, this.name, value)
   }
@@ -107,7 +110,7 @@ class CachedDerivedValue extends DerivedValue {
 
     Object.defineProperty(klass.prototype, derived.name, {
       get () {
-        if (this.hasOwnProperty(derived.$$cache)) {
+        if (!this.hasOwnProperty(derived.$$invalidated) && this.hasOwnProperty(derived.$$cache)) {
           return this[derived.$$cache]
         } else {
           derived.cache(this)
@@ -131,8 +134,10 @@ class CachedDerivedValue extends DerivedValue {
   }
 
   update (object, changeset) {
-    if (this.options.eager === true || object.hasOwnProperty(this.$$cache)) {
+    if (this.options.eager === true) {
       this.cache(object, changeset)
+    } else if (object.hasOwnProperty(this.$$cache)) {
+      object[this.$$invalidated] = true
     } else {
       delete object[this.$$cache]
     }
