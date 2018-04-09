@@ -661,13 +661,24 @@ function generateModel (name) {
     },
 
     $invalidate (...names) {
+      const {allPromise} = require('..')
+      const promises = []
+
       for (let name of names) {
         const derived = klass[$$derived][name]
         if (derived == null || !(derived instanceof DerivedValue.Cached)) {
           throw new Error(`$invalidate was called for a property that wasn't a cached derived value: ${name}`)
         }
         derived.clearCache(this, true)
+        if (derived instanceof DerivedValue.Async) {
+          promises.push(derived.ensure(this))
+        }
       }
+
+      if (promises.length === 0) {
+        return this.$selfPromise
+      }
+      return allPromise(promises).then(() => this)
     },
 
     $clear (...names) {
