@@ -55,12 +55,6 @@ class DerivedValue {
   shouldUpdate () {
     return false
   }
-
-  maybeUpdate (klass, object, changeset) {
-    if (this.shouldUpdate(klass, object, changeset)) {
-      this.update(object, changeset)
-    }
-  }
 }
 
 class CachedDerivedValue extends DerivedValue {
