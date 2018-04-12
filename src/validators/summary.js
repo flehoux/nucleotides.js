@@ -25,7 +25,7 @@ module.exports = class ValidationSummary {
       summary.$update(newIssues)
       return summary
     }
-    model.derive(property, {cached: true, source: 'manual'}, accessorFn)
+    model.derive(property, {cached: true, eager: true, source: 'manual'}, accessorFn)
   }
 
   constructor (level, key) {
