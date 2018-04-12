@@ -31,7 +31,8 @@ function isPromiseLike (arg) {
   return ['then', 'catch'].every((name) => typeof arg[name] === 'function')
 }
 
-const {createPromise, resolvePromise} = require('..')
+const index = require('..')
+const {createPromise, resolvePromise} = index
 
 class AsyncFlow extends Flow {
   constructor (functions, ...args) {

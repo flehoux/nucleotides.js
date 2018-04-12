@@ -19,6 +19,7 @@ module.exports = {
   Collection,
   EmittingArray,
   Validator,
+
   makeEmitter: require('./src/emitter').mixin,
 
   setPromiseFactory: function (factory) {
@@ -37,6 +38,18 @@ module.exports = {
     return promiseFactory(...args)
   }
 }
+
+Object.defineProperty(module.exports, 'AsyncFlow', {
+  get () {
+    return require('./src/async_flow')
+  }
+})
+
+Object.defineProperty(module.exports, 'Flow', {
+  get () {
+    return require('./src/flow')
+  }
+})
 
 let mixins = require('./src/mixins')
 for (let mixinName in mixins) {
