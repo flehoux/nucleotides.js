@@ -237,11 +237,23 @@ function generateModel (name) {
     }
   }
 
+  klass.hasAttribute = function (name) {
+    return klass[$$attributes][name]
+  }
+
   klass.derive = function (name, options, getter) {
     const derived = DerivedValue.create(name, options, getter)
     derived.augmentModel(klass)
     klass[$$derived][name] = derived
     return klass
+  }
+
+  klass.derived = function () {
+    return klass[$$derived]
+  }
+
+  klass.hasDerived = function (name) {
+    return klass[$$derived][name]
   }
 
   klass.method = function (name, fn) {
@@ -492,7 +504,7 @@ function generateModel (name) {
         }
 
         for (const attributeName in data) {
-          if (attributeName in klass.attributes()) {
+          if (klass.hasAttribute(attributeName)) {
             klass.attribute(attributeName).updateValue(this, data[attributeName], options)
           }
           if (options.force === true) {
