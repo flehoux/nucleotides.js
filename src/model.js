@@ -708,6 +708,9 @@ function generateModel (name) {
         this[$$parent] = parent
         this[$$parentLocation] = name
         parent.$on('destroy', this.$destroy)
+        if (parent.$mounted) {
+          this.$mount()
+        }
       } else if (!optional && this[$$parent] !== parent) {
         throw new Model.AncestryError('Cannot change an object\'s parent')
       }
