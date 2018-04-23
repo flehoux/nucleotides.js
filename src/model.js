@@ -628,7 +628,7 @@ function generateModel (name) {
         } else {
           const derived = klass[$$derived][name]
           if (derived == null) {
-            if (_.isString(name) && name.indexOf('.') !== -1) {
+            if (typeof name === 'string' && name.indexOf('.') !== -1) {
               let value = get(this, name)
               if (value != null) {
                 promise = this.$selfPromise
