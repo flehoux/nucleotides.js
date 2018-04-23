@@ -77,10 +77,7 @@ class CachedDerivedValue extends DerivedValue {
   }
 
   cache (object, changeset) {
-    object[this.$$cache] = this.getter.call(object, object[this.$$cache], changeset)
-    delete object[this.$$invalidated]
-    object.$emit('resolved', this.name, object[this.$$cache])
-    object.constructor.$emit('resolved', object, this.name, object[this.$$cache])
+    this.force(object, this.getter.call(object, object[this.$$cache], changeset))
   }
 
   clearCache (object) {
@@ -88,7 +85,13 @@ class CachedDerivedValue extends DerivedValue {
   }
 
   force (object, value) {
+    if (this.options.model && object[this.$$cache] != null) {
+      object[this.$$cache].$removeFromParent(object)
+    }
     object[this.$$cache] = value
+    if (this.options.model && value != null) {
+      value.$setParent(object, this.name, true)
+    }
     delete object[this.$$invalidated]
     object.$emit('resolved', this.name, value)
     object.constructor.$emit('resolved', object, this.name, value)
@@ -101,6 +104,12 @@ class CachedDerivedValue extends DerivedValue {
         derived.cache(object)
       })
     }
+
+    klass.$on('mount', function (object) {
+      if (object[this.$$cache] != null) {
+        object[this.$$cache].$mount()
+      }
+    })
 
     Object.defineProperty(klass.prototype, derived.name, {
       get () {
@@ -153,11 +162,11 @@ class AsyncDerivedValue extends CachedDerivedValue {
     }
   }
 
-  force (object, value) {
-    object[this.$$promise] = Promise.resolve(value)
+  force (object, value, setPromise = true) {
+    if (setPromise) {
+      object[this.$$promise] = Promise.resolve(value)
+    }
     super.force(object, value)
-    object.$emit('resolved', this.name, value)
-    object.constructor.$emit('resolved', object, this.name, value)
   }
 
   augmentModel (klass) {
@@ -193,9 +202,7 @@ class AsyncDerivedValue extends CachedDerivedValue {
     let result = this.getter.call(object, object[this.$$cache], changeset)
     const {resolvePromise} = require('..')
     object[derived.$$promise] = resolvePromise(result).then(function (value) {
-      object[derived.$$cache] = value
-      object.$emit('resolved', derived.name, value)
-      object.constructor.$emit('resolved', object, derived.name, value)
+      derived.force(object, value, false)
       return object
     })
     return object[derived.$$promise]

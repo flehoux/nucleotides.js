@@ -703,12 +703,12 @@ function generateModel (name) {
       }
     },
 
-    $setParent (parent, name) {
+    $setParent (parent, name, optional = false) {
       if (this[$$parent] == null) {
         this[$$parent] = parent
         this[$$parentLocation] = name
         parent.$on('destroy', this.$destroy)
-      } else if (this[$$parent] !== parent) {
+      } else if (!optional && this[$$parent] !== parent) {
         throw new Model.AncestryError('Cannot change an object\'s parent')
       }
     },
@@ -718,6 +718,14 @@ function generateModel (name) {
         this[$$parent].$off('destroy', this.$destroy)
         delete this[$$parent]
         delete this[$$parentLocation]
+        return true
+      }
+    },
+
+    $removeFromParent (parent) {
+      if (this[$$parent] === parent) {
+        this.$unsetParent()
+        this.$destroy()
       }
     },
 

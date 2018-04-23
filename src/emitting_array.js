@@ -13,13 +13,31 @@ class EmittingArray extends Array {
   constructor (...args) {
     super(...args)
     EventEmitter.mixin(this)
+
+    this.destroy = this.destroy.bind(this)
   }
 
-  $setParent (object) {
+  $setParent (object, name, optional = false) {
     if (this[$$parent] == null) {
       this[$$parent] = object
-    } else if (this[$$parent] !== object) {
+      this[$$parent].$on('destroy', this.destroy)
+    } else if (!optional && this[$$parent] !== object) {
       throw new Error('Attempt to bind collection to another parent')
+    }
+  }
+
+  $unsetParent () {
+    if (this[$$parent] != null) {
+      this[$$parent].$off('destroy', this.destroy)
+      delete this[$$parent]
+      return true
+    }
+  }
+
+  $removeFromParent (parent) {
+    if (this[$$parent] === parent) {
+      this.$unsetParent()
+      this.destroy()
     }
   }
 

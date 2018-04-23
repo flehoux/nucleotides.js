@@ -28,4 +28,8 @@ module.exports = Base => {
     }
     return this
   }
+
+  Object.defineProperty(Base.prototype, '$mounted', {
+    get () { return this.hasOwnProperty($$count) }
+  })
 }
