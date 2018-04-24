@@ -94,9 +94,29 @@ class MapCollection {
     this[$$set] = new Set()
     this[$$filters] = []
     this[$$transforms] = []
-    this.$on('add', item => this[$$set].add(item))
-    this.$on('remove', item => this[$$set].delete(item))
     this.$on('adding', this.$$transformElements.bind(this))
+    this.$on('add', function (elements) {
+      for (let element of elements) {
+        element.$addToCollection(this)
+        this[$$set].add(element)
+      }
+    })
+    this.$on('remove', function (elements) {
+      for (let element of elements) {
+        element.$removeFromCollection()
+        this[$$set].delete(element)
+      }
+    })
+    this.$on('unmount', () => {
+      for (let element of this) {
+        element.$unmount()
+      }
+    })
+    this.$on('mount', () => {
+      for (let element of this) {
+        element.$mount()
+      }
+    })
   }
 
   get [$$map] () {
