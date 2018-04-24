@@ -738,6 +738,9 @@ function generateModel (name) {
         this.$removeFromCollection()
       }
       this[$$collection] = collection
+      if (collection.$mounted) {
+        this.$mount()
+      }
       collection.$on('destroy', this.$destroy)
       if (collection.$parent) {
         this.$setParent(collection.$parent)
@@ -748,6 +751,9 @@ function generateModel (name) {
       if (this[$$collection] != null) {
         if (this[$$collection].$parent != null) {
           this.$unsetParent(this[$$collection].$parent)
+        }
+        if (this[$$collection].$mounted) {
+          this.$unmount()
         }
         this[$$collection].$off('destroy', this.$destroy)
         delete this[$$collection]

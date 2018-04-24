@@ -45,6 +45,16 @@ class ArrayCollection extends EmittingArray {
         element.$removeFromCollection()
       }
     })
+    this.$on('unmount', () => {
+      for (let element of this) {
+        element.$unmount()
+      }
+    })
+    this.$on('mount', () => {
+      for (let element of this) {
+        element.$mount()
+      }
+    })
     this[$$map] = {}
   }
 
