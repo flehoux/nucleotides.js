@@ -142,8 +142,10 @@ class Difference {
   }
 
   $setInitial (attribute) {
-    this.$initialData.set(attribute.$$key, attribute.getEncodedValue(this.$object))
-    this.$invalidate()
+    if (!this.$initialData.has(attribute.$$key)) {
+      this.$initialData.set(attribute.$$key, attribute.getEncodedValue(this.$object))
+      this.$invalidate()
+    }
   }
 
   $invalidate () {
