@@ -33,12 +33,16 @@ const DifferenceMixin = Mixin('DifferenceMixin')
 
     return forked
   })
-  .method('$commitChanges', function () {
+  .method('$commitChanges', function (mixin, applyToInitial = false) {
     if (this.$original != null || !this.$isPristine) {
       let changeset = this.$difference.$getChangeSet()
       if (changeset.$size > 0) {
         this[$$skippingRebound] = true
-        changeset.$applyToObject(this.$original)
+        if (applyToInitial) {
+          this.$original.$difference.$applyToInitial(changeset)
+        } else {
+          changeset.$applyToObject(this.$original)
+        }
         delete this[$$skippingRebound]
       }
       this.$difference.$setPristine()

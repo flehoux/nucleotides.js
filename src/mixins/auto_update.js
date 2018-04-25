@@ -12,7 +12,8 @@ function autoUpdateObject (mixin, conditional) {
   }
 
   let listen
-  let self = this
+  const self = this
+
   if (typeof conditional === 'function') {
     listen = function (committed) {
       if (self === committed) {
@@ -21,11 +22,11 @@ function autoUpdateObject (mixin, conditional) {
       let clean = committed.$clean
       let response = conditional.call(self, clean)
       if (response === true) {
-        self.$updateAttributes(clean, {skipDifference: true})
+        self.$difference.$applyToInitial(clean)
       } else if (response != null && typeof response.then === 'function') {
         response.then((resolved) => {
           if (resolved === true) {
-            self.$updateAttributes(clean, {skipDifference: true})
+            self.$difference.$applyToInitial(clean)
           }
         })
       }
@@ -35,7 +36,7 @@ function autoUpdateObject (mixin, conditional) {
       if (self === committed) {
         return
       }
-      self.$updateAttributes(committed.$clean, {skipDifference: true})
+      self.$difference.$applyToInitial(committed.$clean)
     }
   }
   this.constructor.$on(eventKey, listen)

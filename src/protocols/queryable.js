@@ -124,6 +124,7 @@ function doSave (...args) {
       this.$isNew = false
       this.constructor.$emit('created', this)
     }
+    this.$setPristine()
     this.$emit('saved')
     this.constructor.$emit('saved', this)
 

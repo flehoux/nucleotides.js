@@ -406,10 +406,13 @@ function generateModel (name) {
     }
   })
 
-  klass.method('$rollback', function (mixin) {
+  klass.method('$rollback', function (setPristine = false) {
     if (!this.$isPristine) {
       let changeset = this.$difference.$getRevertChangeSet()
       changeset.$applyToObject(this)
+      if (setPristine) {
+        this.$setPristine()
+      }
     }
     return this
   })

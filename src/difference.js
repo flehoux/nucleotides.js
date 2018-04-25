@@ -119,6 +119,9 @@ class Difference {
   }
 
   $applyToInitial (changeset, options) {
+    if (!(changeset instanceof ChangeSet)) {
+      changeset = this.$compareWithInitial(changeset)
+    }
     let appliedChanges = changeset[$$changes]
     let changes = new Map()
     for (let [attribute, newValue] of appliedChanges) {
@@ -159,6 +162,17 @@ class Difference {
     let changes = new Map()
     for (let [key, value] of this.$delta) {
       changes.set(this.$attributesByKey.get(key), value)
+    }
+    return new ChangeSet(changes, this)
+  }
+
+  $compareWithInitial (newData) {
+    let changes = new Map()
+    for (let [key, attribute] of this.$attributesByKey) {
+      let newValue = newData[attribute.name]
+      if (!isEqual(newValue, this.$initialData.get(key))) {
+        changes.set(attribute, newValue)
+      }
     }
     return new ChangeSet(changes, this)
   }
