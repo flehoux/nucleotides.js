@@ -554,7 +554,7 @@ function generateModel (name) {
       let changeset
       if (this[$$changed] != null) {
         if (this[$$changed].size > 0 && !tx.constructing) {
-          changeset = this.$difference.$compare()
+          changeset = this.$difference.$compare(this[$$changed])
           if (changeset.$size > 0) {
             this.$invalidateDerivedValues(changeset, [])
             this.constructor.$emit('update', this, changeset)

@@ -25,10 +25,13 @@ class ChangeSet {
     Object.defineProperty(this, '$size', {value: keys.size})
   }
 
-  $applyToObject (object, options) {
+  $applyToObject (object, options = {}) {
     object.$performInTransaction(() => {
       for (let [attribute, value] of this[$$changes]) {
         attribute.updateValue(object, value, options)
+        if (options.force) {
+          object.$didChange(attribute.name)
+        }
       }
     })
   }
@@ -69,7 +72,7 @@ class Difference {
     this.$object.$on('destroy', this.$destroyFn)
   }
 
-  $compare () {
+  $compare (forcedChanged) {
     let changes = new Map()
     for (let [key, attribute] of this.$attributesByKey) {
       let currentValue = attribute.getEncodedValue(this.$object)
@@ -83,6 +86,9 @@ class Difference {
         }
       } else if (!isEqual(currentValue, this.$initialData.get(key))) {
         this.$delta.set(key, currentValue)
+        changes.set(attribute, currentValue)
+      }
+      if (!changes.has(attribute) && forcedChanged && forcedChanged.has(attribute.name)) {
         changes.set(attribute, currentValue)
       }
     }
@@ -118,7 +124,7 @@ class Difference {
     return changeset
   }
 
-  $applyToInitial (changeset, options) {
+  $applyToInitial (changeset, options = {}) {
     if (!(changeset instanceof ChangeSet)) {
       changeset = this.$compareWithInitial(changeset)
     }
@@ -137,6 +143,7 @@ class Difference {
       this.$invalidate()
     }
     changeset = new ChangeSet(changes, this)
+    options.force = true
     changeset.$applyToObject(this.$object, options)
     return changeset
   }
