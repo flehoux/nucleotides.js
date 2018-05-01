@@ -23,9 +23,10 @@ class Validator {
           data[issue.path] = []
         }
         data[issue.path].push({
+          code: issue.code,
+          data: issue.data,
           description: issue.description(object),
-          level: issue.level,
-          data: issue.data
+          level: issue.level
         })
       }
     }
