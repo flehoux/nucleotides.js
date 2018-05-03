@@ -353,7 +353,7 @@ class Attribute {
       set (value) { attribute.updateValue(this, value) },
       get () { return this.$data[attribute.name] }
     })
-    return target.$performInTransaction(() => {
+    return target.$performInTransaction({initializing: this}, () => {
       if (this.collection !== false) {
         this.initializeCollectionInTarget(target, value, {initializing: true})
       } else if (value != null) {

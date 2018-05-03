@@ -46,7 +46,7 @@ class EmittingArray extends Array {
   }
 
   destroy () {
-    this.$emit('destroy')
+    this.$maybeEmit('destroy')
     this.$off()
     delete this[$$parent]
   }
@@ -61,7 +61,7 @@ class EmittingArray extends Array {
         return cb(elements)
       }
       let event = {elements, reason: null, canceled: false}
-      this.$emit('adding', event)
+      this.$maybeEmit('adding', event)
       if (!event.canceled) {
         return cb(event.elements)
       } else {
@@ -78,7 +78,7 @@ class EmittingArray extends Array {
   push (...args) {
     return this.prepareContext(args, (elements) => {
       let result = super.push(...elements)
-      this.$emit('add', elements)
+      this.$maybeEmit('add', elements)
       return result
     })
   }
@@ -86,7 +86,7 @@ class EmittingArray extends Array {
   unshift (...args) {
     return this.prepareContext(args, (elements) => {
       let result = super.unshift(...elements)
-      this.$emit('add', elements)
+      this.$maybeEmit('add', elements)
       return result
     })
   }
@@ -103,10 +103,10 @@ class EmittingArray extends Array {
       }
       let result = super.splice(start, deleteCount, ...newElements)
       if (removed.length > 0) {
-        this.$emit('remove', new Array(...removed))
+        this.$maybeEmit('remove', new Array(...removed))
       }
       if (newElements.length > 0) {
-        this.$emit('add', newElements)
+        this.$maybeEmit('add', newElements)
       }
       return result
     })
@@ -116,7 +116,7 @@ class EmittingArray extends Array {
     return this.prepareContext(() => {
       var result = super.shift()
       if (result != null) {
-        this.$emit('remove', [result])
+        this.$maybeEmit('remove', [result])
       }
       return result
     })
@@ -126,7 +126,7 @@ class EmittingArray extends Array {
     return this.prepareContext(() => {
       var result = super.pop()
       if (result != null) {
-        this.$emit('remove', [result])
+        this.$maybeEmit('remove', [result])
       }
       return result
     })
@@ -137,19 +137,31 @@ class EmittingArray extends Array {
       let removed = this.slice(start, end)
       let result = super.fill(newElements[0], start, end)
       if (removed.length > 0) {
-        this.$emit('remove', removed)
-        this.$emit('add', newElements)
+        this.$maybeEmit('remove', removed)
+        this.$maybeEmit('add', newElements)
       }
       return result
     })
   }
 
-  $clear () {
-    return this.splice(0, this.length)
+  $clear (options) {
+    this.operationOptions = options
+    let result = this.splice(0, this.length)
+    delete this.operationOptions
+    return result
   }
 
-  $updateAll (items) {
+  $updateAll (items, options) {
+    this.operationOptions = options
     this.splice(0, this.length, ...items)
+    delete this.operationOptions
+  }
+
+  $maybeEmit (event, elements) {
+    this.$emit(`internal:${event}`, elements)
+    if (this.operationOptions == null || !this.operationOptions.initializing) {
+      this.$emit(event, elements)
+    }
   }
 
   get $clean () {

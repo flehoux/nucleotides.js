@@ -34,23 +34,23 @@ class ArrayCollection extends EmittingArray {
     super(...args)
     this[$$filters] = []
     this[$$transforms] = []
-    this.$on('adding', this.$$transformElements.bind(this))
-    this.$on('add', function (elements) {
+    this.$on('internal:adding', this.$$transformElements.bind(this))
+    this.$on('internal:add', function (elements) {
       for (let element of elements) {
         element.$addToCollection(this)
       }
     })
-    this.$on('remove', function (elements) {
+    this.$on('internal:remove', function (elements) {
       for (let element of elements) {
         element.$removeFromCollection()
       }
     })
-    this.$on('unmount', () => {
+    this.$on('internal:unmount', () => {
       for (let element of this) {
         element.$unmount()
       }
     })
-    this.$on('mount', () => {
+    this.$on('internal:mount', () => {
       for (let element of this) {
         element.$mount()
       }
@@ -209,11 +209,15 @@ class ArrayCollection extends EmittingArray {
       for (let item of removed) {
         this.splice(this.indexOf(item), 1)
       }
+      let trackingItems = []
       for (let item of items) {
         if (this.indexOf(item) === -1) {
           this.push(item)
+          let realItem = this[this.length - 1]
+          trackingItems.push(realItem)
         }
       }
+      items = trackingItems
     } else {
       items = [...items]
       let currentItems = [...this]
@@ -249,6 +253,7 @@ class ArrayCollection extends EmittingArray {
   }
 
   $updateAll (items, options) {
+    this.operationOptions = options
     if (this.$parent) {
       this.$parent.$performInTransaction(() => {
         this[$$doUpdateAll](items, options)
@@ -256,6 +261,7 @@ class ArrayCollection extends EmittingArray {
     } else {
       this[$$doUpdateAll](items, options)
     }
+    delete this.operationOptions
     return this
   }
 
@@ -325,13 +331,13 @@ class ArrayCollection extends EmittingArray {
       Collectable.prepareCollection(this.$model, this)
     }
     if (this.$model.hasValue(Identifiable.idKey)) {
-      this.$on('add', function (elements) {
+      this.$on('internal:add', function (elements) {
         for (let element of elements) {
           let key = Identifiable.idFor(element)
           this[$$map][key] = element
         }
       })
-      this.$on('remove', function (elements) {
+      this.$on('internal:remove', function (elements) {
         for (let element of elements) {
           let key = Identifiable.idFor(element)
           delete this[$$map][key]

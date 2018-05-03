@@ -29,7 +29,7 @@ class MapCollection {
       }
 
       delete target[property]
-      target.$emit('remove', [oldValue])
+      target.$maybeEmit('remove', [oldValue])
     }
 
     let updateValue = function (target, property, newValue) {
@@ -53,7 +53,7 @@ class MapCollection {
           reason: null,
           canceled: false
         }
-        target.$emit('adding', event)
+        target.$maybeEmit('adding', event)
         if (!event.canceled) {
           let newValue = event.elements[property]
           target[$$inTransaction](() => {
@@ -61,7 +61,7 @@ class MapCollection {
               updateValue(target, property, newValue)
             } else {
               target[property] = newValue
-              target.$emit('add', [newValue])
+              target.$maybeEmit('add', [newValue])
               newValue.$addToCollection(target)
             }
           })
@@ -94,25 +94,25 @@ class MapCollection {
     this[$$set] = new Set()
     this[$$filters] = []
     this[$$transforms] = []
-    this.$on('adding', this.$$transformElements.bind(this))
-    this.$on('add', function (elements) {
+    this.$on('internal:adding', this.$$transformElements.bind(this))
+    this.$on('internal:add', function (elements) {
       for (let element of elements) {
         element.$addToCollection(this)
         this[$$set].add(element)
       }
     })
-    this.$on('remove', function (elements) {
+    this.$on('internal:remove', function (elements) {
       for (let element of elements) {
         element.$removeFromCollection()
         this[$$set].delete(element)
       }
     })
-    this.$on('unmount', () => {
+    this.$on('internal:unmount', () => {
       for (let element of this) {
         element.$unmount()
       }
     })
-    this.$on('mount', () => {
+    this.$on('internal:mount', () => {
       for (let element of this) {
         element.$mount()
       }
@@ -232,7 +232,8 @@ class MapCollection {
     return this
   }
 
-  $updateAll (items) {
+  $updateAll (items, options) {
+    this.operationOptions = options
     this[$$inTransaction](() => {
       let newKeys = new Set(Object.keys(items))
       let oldKeys = new Set(Object.keys(this))
@@ -267,7 +268,15 @@ class MapCollection {
         this[key] = items[key]
       }
     })
+    delete this.operationOptions
     return this
+  }
+
+  $maybeEmit (event, elements) {
+    this.$emit(`internal:${event}`, elements)
+    if (this.operationOptions == null || !this.operationOptions.initializing) {
+      this.$emit(event, elements)
+    }
   }
 
   $addTransform (fn) {

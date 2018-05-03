@@ -553,21 +553,32 @@ function generateModel (name) {
     $afterTransaction (tx) {
       let changeset
       if (this[$$changed] != null) {
-        if (this[$$changed].size > 0 && !tx.constructing) {
-          changeset = this.$difference.$compare(this[$$changed])
+        let changedAttributeNames = this[$$changed]
+        delete this[$$changed]
+        if (changedAttributeNames.size > 0 && !tx.constructing) {
+          if (tx.initializing != null) {
+            this.$difference.$setInitial(tx.initializing)
+            changedAttributeNames.delete(tx.initializing.name)
+          }
+          changeset = this.$difference.$compare(changedAttributeNames)
           if (changeset.$size > 0) {
             this.$invalidateDerivedValues(changeset, [])
             this.constructor.$emit('update', this, changeset)
             this.$emit('update', changeset)
-            this.$validate(this[$$changed])
+            this.$validate(changedAttributeNames)
           }
         }
         if (tx.constructing) {
           this.constructor.$emit('new', this)
         }
-        delete this[$$changed]
       }
       TransactionManager.prototype.$afterTransaction.call(this, tx, changeset)
+    },
+
+    $touch (attributeName) {
+      this.$performInTransaction(() => {
+        this.$didChange(attributeName)
+      })
     },
 
     $validate (keys, data, constructing = false) {
