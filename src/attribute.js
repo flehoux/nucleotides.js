@@ -402,7 +402,6 @@ class Attribute {
           let oldValue = target.$lazyData[this.$$key].value
           if (oldValue !== value) {
             target.$lazyData[this.$$key].value = value
-            target.$didChange(this.name)
           }
           return
         }
@@ -410,12 +409,20 @@ class Attribute {
       }
       if (this.collection === 'array') {
         this.doUpdateArrayInTarget(target, value, options)
-        if (!options.initializing) {
+        if (options.initializing) {
+          if (target.$difference != null) {
+            target.$difference.$setInitial(this)
+          }
+        } else {
           target.$didChange(this.name)
         }
       } else if (this.collection === 'map') {
         this.doUpdateMapInTarget(target, value, options)
-        if (!options.initializing) {
+        if (options.initializing) {
+          if (target.$difference != null) {
+            target.$difference.$setInitial(this)
+          }
+        } else {
           target.$didChange(this.name)
         }
       } else {

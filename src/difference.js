@@ -145,14 +145,20 @@ class Difference {
     changeset = new ChangeSet(changes, this)
     options.force = true
     changeset.$applyToObject(this.$object, options)
+    for (let attribute of changeset[$$changes].keys()) {
+      this.$setInitial(attribute)
+    }
     return changeset
   }
 
   $setInitial (attribute) {
-    if (!this.$initialData.has(attribute.$$key)) {
-      this.$initialData.set(attribute.$$key, attribute.getEncodedValue(this.$object))
-      this.$invalidate()
+    const newValue = attribute.getEncodedValue(this.$object)
+    const key = attribute.$$key
+    this.$initialData.set(attribute.$$key, newValue)
+    if (isEqual(newValue, this.$initialData.get(key))) {
+      this.$delta.delete(key)
     }
+    this.$invalidate()
   }
 
   $invalidate () {
