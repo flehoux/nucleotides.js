@@ -38,6 +38,7 @@ const GENERATORS = {
     return Object.assign({}, value)
   },
   date (value) {
+    if (value == null) return
     if (value instanceof Date) {
       return value
     } else if (typeof value === 'string' || typeof value === 'number') {
