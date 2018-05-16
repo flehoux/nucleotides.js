@@ -10,6 +10,7 @@ const $$filters = Symbol('filters')
 const $$transforms = Symbol('transforms')
 const $$parent = Symbol('parent')
 const $$inTransaction = Symbol('inTransaction')
+const $$operationOptions = Symbol('operationOptions')
 
 const EventEmitter = require('../emitter')
 const Model = require('../model')
@@ -23,6 +24,10 @@ class MapCollection {
     let coll = new MapCollection()
 
     let removeValue = function (target, property) {
+      if (typeof property === 'symbol') {
+        return
+      }
+
       let oldValue = target[property]
       if (oldValue == null) {
         return
@@ -33,6 +38,10 @@ class MapCollection {
     }
 
     let updateValue = function (target, property, newValue) {
+      if (typeof property === 'symbol') {
+        return
+      }
+
       let oldValue = target[property]
       if (oldValue != null) {
         if (Model.isInstance(newValue)) {
@@ -103,8 +112,10 @@ class MapCollection {
     })
     this.$on('internal:remove', function (elements) {
       for (let element of elements) {
-        element.$removeFromCollection()
-        this[$$set].delete(element)
+        if (typeof property !== 'symbol') {
+          element.$removeFromCollection()
+          this[$$set].delete(element)
+        }
       }
     })
     this.$on('internal:unmount', () => {
@@ -233,7 +244,7 @@ class MapCollection {
   }
 
   $updateAll (items, options) {
-    this.operationOptions = options
+    this[$$operationOptions] = options
     this[$$inTransaction](() => {
       let newKeys = new Set(Object.keys(items))
       let oldKeys = new Set(Object.keys(this))
@@ -268,13 +279,13 @@ class MapCollection {
         this[key] = items[key]
       }
     })
-    delete this.operationOptions
+    delete this[$$operationOptions]
     return this
   }
 
   $maybeEmit (event, elements) {
     this.$emit(`internal:${event}`, elements)
-    if (this.operationOptions == null || !this.operationOptions.initializing) {
+    if (this[$$operationOptions] == null || !this[$$operationOptions].initializing) {
       this.$emit(event, elements)
     }
   }
