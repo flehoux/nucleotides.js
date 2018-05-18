@@ -80,7 +80,7 @@ class MapCollection {
         }
       },
       deleteProperty: function (target, property) {
-        if (property instanceof Symbol) {
+        if (typeof property === 'symbol') {
           delete target[property]
           return true
         }
