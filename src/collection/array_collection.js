@@ -235,10 +235,11 @@ class ArrayCollection extends EmittingArray {
           newItems.push(item)
         }
       }
-      for (let item of this) {
+      for (let i = this.length - 1; i >= 0; --i) {
+        let item = this[i]
         let idx = items.indexOf(item)
         if (idx === -1) {
-          this.splice(this.indexOf(item), 1)
+          this.splice(i, 1)
         }
       }
       this.push(...newItems)
