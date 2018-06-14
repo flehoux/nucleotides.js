@@ -28,9 +28,9 @@ describe('A Model, as an event emitter', function () {
     Person.$off('new')
   })
 
-  it('should trigger a \'change\' event on the Model', function () {
+  it('should trigger a \'update\' event on the Model', function () {
     let spy = jasmine.createSpy()
-    Person.$on('change', spy)
+    Person.$on('update', spy)
 
     let i = 20
     let p = new Person({firstName: 'Larry', lastName: 'Smith'})
@@ -41,27 +41,31 @@ describe('A Model, as an event emitter', function () {
 
     expect(spy.calls.count()).toEqual(5)
     expect(spy.calls.argsFor(0)[0]).toEqual(jasmine.any(Person))
-    expect(spy.calls.argsFor(0)[1]).toEqual({ age: 19 })
+    expect(spy.calls.argsFor(0)[1].age.currentValue).toEqual(19)
+    expect(spy.calls.argsFor(0)[1].$size).toEqual(1)
     expect(spy.calls.mostRecent().object).toEqual(Person)
 
-    Person.$off('change')
+    Person.$off('update')
   })
 
-  it('should trigger a \'change\' event on the Model instance', function () {
+  it('should trigger a \'update\' event on the Model instance', function () {
     let spy = jasmine.createSpy()
 
     let i = 20
     let p = new Person({firstName: 'Larry', lastName: 'Smith'})
-    p.$on('change', spy)
+    p.$on('update', spy)
 
     while (i-- > 15) { p.age = i }
 
     expect(spy.calls.count()).toEqual(5)
-    expect(spy.calls.argsFor(0)[0]).toEqual({ age: 19 })
+    expect(spy.calls.argsFor(0)[0].age.currentValue).toEqual(19)
+    expect(spy.calls.argsFor(0)[0].$size).toEqual(1)
     expect(spy.calls.mostRecent().object).toEqual(p)
 
     p.$updateAttributes({firstName: 'John', age: 50})
     expect(spy.calls.count()).toEqual(6)
-    expect(spy.calls.argsFor(5)[0]).toEqual({ age: 50, firstName: 'John' })
+    expect(spy.calls.argsFor(5)[0].age.currentValue).toEqual(50)
+    expect(spy.calls.argsFor(5)[0].firstName.currentValue).toEqual('John')
+    expect(spy.calls.argsFor(5)[0].$size).toEqual(2)
   })
 })

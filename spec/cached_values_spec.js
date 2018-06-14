@@ -1,7 +1,7 @@
 /* global describe it expect beforeEach jasmine */
 
 describe('A Model with cached derived properties', function () {
-  const { Model } = require('..')
+  const {Model} = require('..')
 
   var spies = {
     lazy: jasmine.createSpy().and.returnValue('lazily evaluated'),
@@ -15,8 +15,8 @@ describe('A Model with cached derived properties', function () {
         lastName: String,
         birthdate: { type: Date }
       })
-      .derive('lazy', {cached: true}, spies.lazy)
-      .derive('eager', {cached: true, eager: true}, spies.eager)
+      .derive('lazy', {cached: true, source: 'all'}, spies.lazy)
+      .derive('eager', {cached: true, source: 'all', eager: true}, spies.eager)
       .derive('specificLazy', {cached: true, source: ['firstName']}, spies.specificLazy)
 
   beforeEach(function (done) {
@@ -37,8 +37,8 @@ describe('A Model with cached derived properties', function () {
     expect(person.lazy).toEqual('lazily evaluated')
     expect(spies.lazy).toHaveBeenCalled()
 
-    person.firstName = 'Larry'
     spies.lazy.calls.reset()
+    person.firstName = 'Larry'
 
     expect(spies.lazy).not.toHaveBeenCalled()
     expect(person.lazy).toEqual('lazily evaluated')

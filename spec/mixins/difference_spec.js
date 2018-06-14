@@ -1,7 +1,7 @@
 /* global describe it expect jasmine */
 
 describe('A simple Model modified using the DifferenceMixin', function () {
-  const { Model, Mixin } = require('../..')
+  const { Model } = require('../..')
 
   const Person = Model('Person')
     .attributes({
@@ -10,69 +10,65 @@ describe('A simple Model modified using the DifferenceMixin', function () {
       age: Number,
       emails: [String]
     })
-    .use(new Mixin.Difference({exclude: ['age']}))
 
   it('should initially have an empty difference', function () {
     var p = new Person()
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
 
     p = new Person({firstName: 'Mathieu'})
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
   })
 
   it('should report a difference after a simple change', function () {
     var p = new Person()
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
 
     p.firstName = 'Mathieu'
-    expect(p.$difference).toEqual({firstName: 'Mathieu'})
+    let changeset = p.$difference.$getChangeSet()
+
+    expect(changeset.firstName).not.toBeUndefined()
+    expect(changeset.firstName.currentValue).toEqual('Mathieu')
+    expect(p.$difference.$delta.size).toEqual(1)
     expect(p.$isPristine).toBe(false)
   })
 
   it('should not report duplicate changes for the same attribute', function () {
     var p = new Person()
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
 
     p.firstName = 'Mathieu'
-    expect(p.$difference).toEqual({firstName: 'Mathieu'})
+    expect(p.$difference.$getChangeSet().firstName.currentValue).toEqual('Mathieu')
+    expect(p.$difference.$delta.size).toEqual(1)
     expect(p.$isPristine).toBe(false)
 
     p.firstName = 'John'
-    expect(p.$difference).toEqual({firstName: 'John'})
+    expect(p.$difference.$getChangeSet().firstName.currentValue).toEqual('John')
+    expect(p.$difference.$delta.size).toEqual(1)
     expect(p.$isPristine).toBe(false)
-  })
-
-  it('should not report changes to excluded keys', function () {
-    var p = new Person()
-    expect(p.$difference).toEqual({})
-    expect(p.$isPristine).toBe(true)
-
-    p.age = 2
-    expect(p.$difference).toEqual({})
-    expect(p.$isPristine).toBe(true)
   })
 
   it('should report simplified changes to nested arrays', function () {
     var p = new Person()
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
 
     p.emails = []
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
 
     p.emails = ['john@smith.org']
-    expect(p.$difference).toEqual({emails: ['john@smith.org']})
+    expect(p.$difference.$getChangeSet().emails.currentValue).toEqual(['john@smith.org'])
+    expect(p.$difference.$delta.size).toEqual(1)
     expect(p.$isPristine).toBe(false)
 
     p.$setPristine()
 
     p.emails[0] = 'john@smith.org'
-    expect(p.$difference).toEqual({})
+    expect(p.$difference.$delta.size).toEqual(0)
     expect(p.$isPristine).toBe(true)
   })
 })
@@ -112,9 +108,9 @@ describe('A Model with nested models, modified using the DifferenceMixin', funct
   it('should report simplified changes to a single nested model', function () {
     var p = new Person({name: {first: 'John', last: 'Smith'}})
     p.name.last = 'Conway'
-
-    expect(p.$difference).toEqual({name: {first: 'John', last: 'Conway'}})
-    expect(p.$difference.name).not.toEqual(jasmine.any(Name))
+    var changeSet = p.$difference.$getChangeSet()
+    expect(changeSet.name.currentValue).toEqual({first: 'John', last: 'Conway'})
+    expect(changeSet.name.currentValue).not.toEqual(jasmine.any(Name))
     expect(p.$isPristine).toBe(false)
   })
 
@@ -122,12 +118,15 @@ describe('A Model with nested models, modified using the DifferenceMixin', funct
     var p = new Person({name: {first: 'John', last: 'Smith'}})
 
     p.emails.push(new Email('john@smith.org'))
-    expect(p.$difference).toEqual({emails: [{user: 'john', domain: 'smith.org'}]})
-    expect(p.$difference.emails[0]).not.toEqual(jasmine.any(Name))
+
+    var changeSet = p.$difference.$getChangeSet()
+    expect(changeSet.emails.currentValue).toEqual([{user: 'john', domain: 'smith.org'}])
+    expect(changeSet.emails.currentValue[0]).not.toEqual(jasmine.any(Name))
     expect(p.$isPristine).toBe(false)
 
     p.emails.push(new Email('johnsmith@gmail.com'))
-    expect(p.$difference).toEqual({emails: [{user: 'john', domain: 'smith.org'}, {user: 'johnsmith', domain: 'gmail.com'}]})
+    changeSet = p.$difference.$getChangeSet()
+    expect(changeSet.emails.currentValue).toEqual([{user: 'john', domain: 'smith.org'}, {user: 'johnsmith', domain: 'gmail.com'}])
     expect(p.$isPristine).toBe(false)
   })
 })

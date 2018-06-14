@@ -37,7 +37,7 @@ describe('A Model with simple attributes, methods and derived properties', funct
     expect(person.fullName).toEqual('John Smith')
   })
 
-  it('should be able to expose methods that change internal data', function () {
+  it('should be able to expose methods that update internal data', function () {
     var person = new Person({
       firstName: 'John',
       lastName: 'Smith',
@@ -69,7 +69,7 @@ describe('A Model with array attributes', function () {
 
     expect(person.emails[0]).toEqual(jasmine.any(String))
     expect(person.emails[1]).toEqual(jasmine.any(String))
-    expect(person.emails[1]).toEqual(jasmine.any(String))
+    expect(person.emails[2]).toEqual(jasmine.any(String))
   })
 
   it('should apply the typed generator to each component of the array', function () {
@@ -82,7 +82,7 @@ describe('A Model with array attributes', function () {
 
     expect(person.emails[0]).toEqual(jasmine.any(String))
     expect(person.emails[1]).toEqual(jasmine.any(String))
-    expect(person.emails[1]).toEqual(jasmine.any(String))
+    expect(person.emails[2]).toEqual(jasmine.any(String))
   })
 })
 
@@ -167,7 +167,7 @@ describe('A Model with an attribute typed as another Model', function () {
     })
   })
 
-  it('should bubble up \'change\' events from child model attributes', function (done) {
+  it('should bubble up \'update\' events from child model attributes', function (done) {
     var spy = jasmine.createSpy()
     var person = new Person({
       name: {
@@ -177,20 +177,20 @@ describe('A Model with an attribute typed as another Model', function () {
       birthdate: 527817600000
     })
 
-    person.name.$on('change', spy)
+    person.name.$on('update', spy)
     person.name.last = 'Smith'
 
     setTimeout(function () {
       expect(spy.calls.count()).toBe(1)
-      expect(spy.calls.argsFor(0)[0].last).toBe('Smith')
+      expect(spy.calls.argsFor(0)[0].last.currentValue).toBe('Smith')
 
-      person.name.$off('change', spy)
-      person.$on('change', spy)
+      person.name.$off('update', spy)
+      person.$on('update', spy)
       spy.calls.reset()
 
       person.name.last = 'Anderson'
       setTimeout(function () {
-        expect(spy.calls.argsFor(0)[0].name.last).toBe('Anderson')
+        expect(spy.calls.argsFor(0)[0].name.currentValue.last).toBe('Anderson')
         expect(spy.calls.count()).toBe(1)
         done()
       }, 0)
@@ -217,7 +217,7 @@ describe('A Model with an attribute typed as another Model', function () {
     expect(person.emails[1].full).toBe('johnsmith@gmail.com')
   })
 
-  it('should bubble up \'change\' events from a list of nested models', function (done) {
+  it('should bubble up \'update\' events from a list of nested models', function (done) {
     var spy = jasmine.createSpy()
 
     var person = new Person({
@@ -229,27 +229,27 @@ describe('A Model with an attribute typed as another Model', function () {
     })
 
     let email = person.emails[0]
-    email.$on('change', spy)
+    email.$on('update', spy)
     email.user = 'larry'
 
     setTimeout(function () {
       expect(spy.calls.count()).toBe(1)
-      expect(spy.calls.argsFor(0)[0].user).toBe('larry')
+      expect(spy.calls.argsFor(0)[0].user.currentValue).toBe('larry')
 
-      email.$off('change', spy)
-      person.$on('change', spy)
+      email.$off('update', spy)
+      person.$on('update', spy)
       spy.calls.reset()
 
       email.user = 'karry'
       setTimeout(function () {
-        expect(spy.calls.argsFor(0)[0].emails.user).toBe('karry')
+        expect(spy.calls.argsFor(0)[0].emails.currentValue[0].user).toBe('karry')
         expect(spy.calls.count()).toBe(1)
         done()
       }, 0)
     }, 0)
   })
 
-  it('should bubble up \'change\' events when elements of a \'list\' attribute are manually replaced', function (done) {
+  it('should bubble up \'update\' events when elements of a \'list\' attribute are manually replaced', function (done) {
     var spy = jasmine.createSpy()
 
     var person = new Person({
@@ -260,17 +260,14 @@ describe('A Model with an attribute typed as another Model', function () {
       emails: ['johnsmith@gmail.com']
     })
 
-    person.$on('change', spy)
+    person.$on('update', spy)
 
     let email = new Email('john@smith.org')
     person.emails.splice(0, 1, email)
 
     setTimeout(function () {
-      expect(spy.calls.count()).toBe(2)
-      expect(spy.calls.argsFor(0)[0].emails.removed[0]).toEqual(jasmine.any(Email))
-      expect(spy.calls.argsFor(0)[0].emails.removed[0].user).toBe('johnsmith')
-      expect(spy.calls.argsFor(1)[0].emails.added[0]).toEqual(jasmine.any(Email))
-      expect(spy.calls.argsFor(1)[0].emails.added[0].user).toBe('john')
+      expect(spy.calls.count()).toBe(1)
+      expect(spy.calls.argsFor(0)[0].emails.currentValue[0].user).toBe('john')
       done()
     }, 0)
   })

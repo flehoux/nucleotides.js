@@ -54,7 +54,6 @@ describe("A Model's async derived value", function () {
       expect(poly.spy.calls.count()).toBe(1)
       expect(poly.total).toBe(20)
       poly.x = 1
-      expect(poly.total).toBeUndefined()
       poly.$ensure('total').then(function () {
         expect(poly.spy.calls.count()).toBe(2)
         expect(poly.total).toBe(7)
