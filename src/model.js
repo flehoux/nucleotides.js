@@ -54,10 +54,7 @@ let isArray = (!Array.isArray) ? function (arg) {
 function generateModel (name) {
   const ValidationSummary = require('./validators/summary')
 
-  let klass = factory(name, function (klass, args) {
-    TransactionManager.call(this)
-    this.constructor = klass
-
+  let klass = factory(name, TransactionManager, function (...args) {
     this[$$data] = {}
     this.$destroy = this.$destroy.bind(this)
 

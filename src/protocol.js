@@ -29,10 +29,7 @@ function generateProtocol (name) {
     }
   }
 
-  let protocol = factory(name, function (protocol, args) {
-    this.$prepareEmitter()
-    constructor.apply(this, args)
-  })
+  let protocol = factory(name, EventEmitter, constructor)
 
   protocol[$$supportedBy] = new Set()
   protocol[$$methods] = new Set()
@@ -47,7 +44,6 @@ function generateProtocol (name) {
   })
 
   EventEmitter.mixin(protocol, true)
-  EventEmitter.mixin(protocol)
 
   const identity = () => {}
 

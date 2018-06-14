@@ -20,11 +20,10 @@ const factory = require('./create')
 const EventEmitter = require('./emitter')
 
 function generateMixin (name) {
-  let klass = factory(name, function (klass, args) {
-    klass[$$constructor].apply(this, args)
+  let klass = factory(name, EventEmitter, function (...args) {
+    this.constructor[$$constructor].apply(this, args)
     this[$$models] = new Set()
-    this.$prepareEmitter()
-    klass.$emit('new', this)
+    this.constructor.$emit('new', this)
   })
 
   const uniqueKey = Symbol('key')
@@ -35,7 +34,6 @@ function generateMixin (name) {
   })
 
   EventEmitter.mixin(klass, true)
-  EventEmitter.mixin(klass)
 
   klass[$$constructor] = function (data) {
     if (typeof data === 'object') {
