@@ -24,7 +24,7 @@ gulp.task('javascript', function () {
   globby(['./spec/**/*_spec.js']).then(function (entries) {
     browserify({entries: entries})
     .transform('babelify', {
-      presets: ['es2015'],
+      presets: ['env'],
       plugins: [
         [
           'babel-plugin-transform-builtin-extend',
