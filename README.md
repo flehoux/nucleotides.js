@@ -2,7 +2,7 @@
 
 Agnostic and extensible model framework
 
-![Travis](https://travis-ci.org/n9s/nucleotides.svg?branch=master)
+![Travis](https://travis-ci.com/n9s/nucleotides.svg?branch=master)
 
 ---
 
