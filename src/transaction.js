@@ -22,7 +22,7 @@ class Transaction {
   }
 }
 
-module.exports = class TransactionManager extends EventEmitter {
+class TransactionManager extends EventEmitter {
   constructor () {
     super()
     this[$$stack] = new Set()
@@ -67,3 +67,7 @@ module.exports = class TransactionManager extends EventEmitter {
     return res
   }
 }
+
+EventEmitter.mixin(TransactionManager, true)
+
+module.exports = TransactionManager

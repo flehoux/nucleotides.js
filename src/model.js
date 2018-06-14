@@ -72,7 +72,6 @@ function generateModel (name) {
     })
   })
 
-  klass.prototype = new TransactionManager()
   Mountable(klass)
 
   klass.initializer = function (initFn) {
