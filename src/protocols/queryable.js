@@ -109,7 +109,7 @@ function doNew (...args) {
 }
 
 function doCreate (...args) {
-  let object = this.new(args)
+  let object = this.new(...args)
   let promise = object.$save().then(function (resp) {
     return object
   })
