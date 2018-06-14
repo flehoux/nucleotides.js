@@ -31,7 +31,7 @@ const mixin = {
     if (name == null) {
       this[$$emitter].removeAllListeners()
     } else if (cb == null) {
-      this[$$emitter].removeListeners(name)
+      this[$$emitter].removeEvent(name)
     } else {
       this[$$emitter].removeListener(name, cb[$$bound])
     }
@@ -40,6 +40,9 @@ const mixin = {
     if (!this.hasOwnProperty($$emitter)) {
       this[$$emitter] = new BaseEventEmitter()
     }
+  },
+  $$getEmitter () {
+    return this[$$emitter]
   }
 }
 
