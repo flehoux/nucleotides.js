@@ -10,6 +10,7 @@ let promiseFactory = function (...args) {
 }
 
 promiseFactory.resolve = Promise.resolve.bind(Promise)
+promiseFactory.reject = Promise.reject.bind(Promise)
 promiseFactory.all = Promise.all.bind(Promise)
 
 module.exports = {
