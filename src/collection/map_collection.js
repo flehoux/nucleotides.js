@@ -11,6 +11,7 @@ const $$transforms = Symbol('transforms')
 const $$parent = Symbol('parent')
 const $$inTransaction = Symbol('inTransaction')
 const $$operationOptions = Symbol('operationOptions')
+const $$parentProperty = Symbol('parentProperty')
 
 const EventEmitter = require('../emitter')
 const Model = require('../model')
@@ -134,12 +135,42 @@ class MapCollection {
     return this
   }
 
-  $setParent (object) {
+  $setParent (object, name, optional = false) {
     if (this[$$parent] == null) {
       this[$$parent] = object
+      this[$$parentProperty] = name
+      this[$$parent].$on('destroy', this.destroy)
     } else if (this[$$parent] !== object) {
       throw new Error('Attempt to bind collection to another parent')
     }
+  }
+
+  $unsetParent () {
+    if (this[$$parent] != null) {
+      this[$$parent].$off('destroy', this.destroy)
+      delete this[$$parent]
+      return true
+    }
+  }
+
+  $removeFromParent (parent) {
+    if (this[$$parent] === parent) {
+      this.$unsetParent()
+      this.destroy()
+    }
+  }
+
+  $didChange (object, event = 'update') {
+    if (this.hasOwnProperty($$parent) && this.hasOwnProperty($$parentProperty)) {
+      return this.$parent.$performInTransaction(() => {
+        this.$parent.$didChange(this[$$parentProperty])
+      })
+    }
+    this.$emit(event, object)
+  }
+
+  get $parent () {
+    return this[$$parent]
   }
 
   [$$inTransaction] (cb) {
@@ -148,10 +179,6 @@ class MapCollection {
     } else {
       return cb()
     }
-  }
-
-  get $parent () {
-    return this[$$parent]
   }
 
   destroy () {

@@ -15,7 +15,7 @@ class ChangeSet {
         value: {
           currentValue: value,
           isInitialValue: () => {
-            let initialValue = difference.$initialData.get(attribute.$$key)
+            let initialValue = difference.getInitialDataFor(attribute.$$key)
             return isEqual(initialValue, value)
           }
         }
@@ -55,7 +55,9 @@ class Difference {
       let attribute = object.constructor.attribute(name)
       this.$attributesByName.set(name, attribute)
       this.$attributesByKey.set(attribute.$$key, attribute)
-      initial.set(attribute.$$key, attribute.getEncodedValue(object))
+      if (attribute.isInitializedInTarget(object)) {
+        initial.set(attribute.$$key, attribute.getEncodedValue(object))
+      }
     }
 
     Object.defineProperty(this, '$initialData', {
@@ -75,18 +77,23 @@ class Difference {
   $compare (forcedChanged) {
     let changes = new Map()
     for (let [key, attribute] of this.$attributesByKey) {
-      let currentValue = attribute.getEncodedValue(this.$object)
+      let currentValue
       if (this.$delta.has(key)) {
-        if (isEqual(currentValue, this.$initialData.get(key))) {
+        currentValue = attribute.getEncodedValue(this.$object)
+        if (isEqual(currentValue, this.getInitialDataFor(key))) {
           this.$delta.delete(key)
           changes.set(attribute, currentValue)
         } else if (!isEqual(currentValue, this.$delta.get(key))) {
           this.$delta.set(key, currentValue)
           changes.set(attribute, currentValue)
         }
-      } else if (!isEqual(currentValue, this.$initialData.get(key))) {
-        this.$delta.set(key, currentValue)
-        changes.set(attribute, currentValue)
+      } else {
+        let initialValue = this.getInitialDataFor(key)
+        currentValue = attribute.getEncodedValue(this.$object)
+        if (!isEqual(currentValue, initialValue)) {
+          this.$delta.set(key, currentValue)
+          changes.set(attribute, currentValue)
+        }
       }
       if (!changes.has(attribute) && forcedChanged && forcedChanged.has(attribute.name)) {
         changes.set(attribute, currentValue)
@@ -104,14 +111,14 @@ class Difference {
     for (let [attribute, newValue] of appliedChanges) {
       let key = attribute.$$key
       if (this.$delta.has(key)) {
-        if (isEqual(newValue, this.$initialData.get(key))) {
+        if (isEqual(newValue, this.getInitialDataFor(key))) {
           this.$delta.delete(key)
           changes.set(attribute, newValue)
         } else if (!isEqual(newValue, this.$delta.get(key))) {
           this.$delta.set(key, newValue)
           changes.set(attribute, newValue)
         }
-      } else if (!isEqual(newValue, this.$initialData.get(key))) {
+      } else if (!isEqual(newValue, this.getInitialDataFor(key))) {
         this.$delta.set(key, newValue)
         changes.set(attribute, newValue)
       }
@@ -132,7 +139,7 @@ class Difference {
     let changes = new Map()
     for (let [attribute, newValue] of appliedChanges) {
       let key = attribute.$$key
-      if (!isEqual(newValue, this.$initialData.get(key))) {
+      if (!isEqual(newValue, this.getInitialDataFor(key))) {
         this.$initialData.set(key, newValue)
         if (!this.$delta.has(key)) {
           changes.set(attribute, newValue)
@@ -155,7 +162,7 @@ class Difference {
     const newValue = attribute.getEncodedValue(this.$object)
     const key = attribute.$$key
     this.$initialData.set(attribute.$$key, newValue)
-    if (isEqual(newValue, this.$initialData.get(key))) {
+    if (isEqual(newValue, this.getInitialDataFor(key))) {
       this.$delta.delete(key)
     }
     this.$invalidate()
@@ -168,7 +175,7 @@ class Difference {
   $getRevertChangeSet () {
     let changes = new Map()
     for (let key of this.$delta.keys()) {
-      changes.set(this.$attributesByKey.get(key), this.$initialData.get(key))
+      changes.set(this.$attributesByKey.get(key), this.getInitialDataFor(key))
     }
     return new ChangeSet(changes, this)
   }
@@ -185,11 +192,23 @@ class Difference {
     let changes = new Map()
     for (let [key, attribute] of this.$attributesByKey) {
       let newValue = newData[attribute.name]
-      if (!isEqual(newValue, this.$initialData.get(key))) {
+      if (!isEqual(newValue, this.getInitialDataFor(key))) {
         changes.set(attribute, newValue)
       }
     }
     return new ChangeSet(changes, this)
+  }
+
+  getInitialDataFor (key) {
+    let attribute = this.$attributesByKey.get(key)
+    if (!attribute.isInitializedInTarget(this.$object)) {
+      let value = this.$object[attribute.name]
+      value = attribute.getEncodedValue(this.$object)
+      this.$initialData.set(key, value)
+      return value
+    } else {
+      return this.$initialData.get(key)
+    }
   }
 
   get $currentData () {
@@ -199,7 +218,7 @@ class Difference {
         if (this.$delta.has(key)) {
           current[attribute.name] = this.$delta.get(key)
         } else {
-          current[attribute.name] = this.$initialData.get(key)
+          current[attribute.name] = this.getInitialDataFor(key)
         }
       }
       this[$$current] = current
