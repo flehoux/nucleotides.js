@@ -1,6 +1,9 @@
 const generator = function (name, parent, ctor) {
   return {
     [name]: class extends parent {
+      static get name () {
+        return name
+      }
       constructor (...args) {
         super()
         ctor.call(this, ...args)
