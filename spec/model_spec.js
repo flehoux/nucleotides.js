@@ -15,6 +15,10 @@ describe('A Model with simple attributes, methods and derived properties', funct
       })
       .derive('fullName', function () { return this.firstName + ' ' + this.lastName })
 
+  it('should define a class with proper name', function () {
+    expect(Person.name).toEqual('Person')
+  })
+
   it('should hold valid data with respect to attribute definition', function () {
     var person = new Person({
       firstName: 'John',
