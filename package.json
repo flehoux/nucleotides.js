@@ -38,15 +38,14 @@
   },
   "homepage": "https://github.com/n9s/nucleotides#readme",
   "devDependencies": {
-    "babel-plugin-transform-builtin-extend": "^1.1.2",
-    "babel-polyfill": "^6.23.0",
-    "babel-preset-env": "^1.6.1",
-    "babelify": "^7.3.0",
-    "browserify": "^14.4.0",
+    "@babel/core": "^7.1.2",
+    "@babel/polyfill": "^7.0.0",
+    "@babel/preset-env": "^7.1.0",
+    "babelify": "^10.0.0",
+    "browserify": "^16.2.3",
     "eslint": "^4.15.0",
     "globby": "^6.1.0",
     "gulp": "^3.9.1",
-    "gulp-browserify": "^0.5.1",
     "jasmine": "^2.6.0",
     "karma": "^1.7.0",
     "karma-chrome-launcher": "^2.2.0",
@@ -61,18 +60,7 @@
         "babelify",
         {
           "presets": [
-            "env"
-          ],
-          "plugins": [
-            [
-              "babel-plugin-transform-builtin-extend",
-              {
-                "globals": [
-                  "Error",
-                  "Array"
-                ]
-              }
-            ]
+            "@babel/preset-env"
           ]
         }
       ]

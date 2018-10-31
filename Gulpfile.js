@@ -24,15 +24,7 @@ gulp.task('javascript', function () {
   globby(['./spec/**/*_spec.js']).then(function (entries) {
     browserify({entries: entries})
     .transform('babelify', {
-      presets: ['env'],
-      plugins: [
-        [
-          'babel-plugin-transform-builtin-extend',
-          {
-            globals: ['Error', 'Array']
-          }
-        ]
-      ]
+      presets: ['@babel/preset-env']
     })
     .bundle()
     .pipe(bundledStream)
