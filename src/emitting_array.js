@@ -1,6 +1,5 @@
 const EventEmitter = require('./emitter')
 const $$parent = Symbol('parent')
-const $$parentProperty = Symbol('parentProperty')
 
 class EmittingArray extends Array {
   static get [Symbol.species] () {
@@ -21,7 +20,6 @@ class EmittingArray extends Array {
   $setParent (object, name, optional = false) {
     if (this[$$parent] == null) {
       this[$$parent] = object
-      this[$$parentProperty] = name
       this[$$parent].$on('destroy', this.destroy)
     } else if (!optional && this[$$parent] !== object) {
       throw new Error('Attempt to bind collection to another parent')
@@ -41,15 +39,6 @@ class EmittingArray extends Array {
       this.$unsetParent()
       this.destroy()
     }
-  }
-
-  $didChange (object, event = 'update') {
-    if (this.hasOwnProperty($$parent) && this.hasOwnProperty($$parentProperty)) {
-      return this.$parent.$performInTransaction(() => {
-        this.$parent.$didChange(this[$$parentProperty])
-      })
-    }
-    this.$emit(event, object)
   }
 
   get $parent () {
@@ -171,11 +160,7 @@ class EmittingArray extends Array {
   $maybeEmit (event, elements) {
     this.$emit(`internal:${event}`, elements)
     if (this.operationOptions == null || !this.operationOptions.initializing) {
-      if (event === 'remove' || event === 'add') {
-        this.$didChange(elements, event)
-      } else {
-        this.$emit(event, elements)
-      }
+      this.$emit(event, elements)
     }
   }
 

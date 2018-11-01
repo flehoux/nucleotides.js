@@ -194,10 +194,6 @@ class Attribute {
     return this[$$generator]
   }
 
-  isInitializedInTarget (target) {
-    return !target.$lazyData.hasOwnProperty(this.$$key)
-  }
-
   clone (source, target) {
     const Model = require('./model')
     let value = source.$data[this.name]
@@ -314,7 +310,7 @@ class Attribute {
   getterFor (target) {
     let attribute = this
     return function () {
-      if (!attribute.isInitializedInTarget(this)) {
+      if (this.$lazyData[attribute.$$key]) {
         attribute.initializeInTarget(this)
       }
       return this.$data[attribute.name]
@@ -324,13 +320,11 @@ class Attribute {
   setterFor (target) {
     let attribute = this
     return function (value) {
-      if (!attribute.isInitializedInTarget(this)) {
-        let lazyValue = this.$lazyData[attribute.$$key].value
-        if (lazyValue === value) {
-          return
-        }
+      if (this.$lazyData[attribute.$$key]) {
+        attribute.initializeInTarget(this, value)
+      } else {
+        attribute.updateValue(this, value)
       }
-      attribute.updateValue(this, value)
     }
   }
 
@@ -378,7 +372,7 @@ class Attribute {
   createCollection () {
     let attribute = this
     let collection = EmittingArray.create()
-    collection.$on('internal:adding', function (event) {
+    collection.$on('adding', function (event) {
       let {elements} = event
       event.elements = elements.map(function (element) {
         if (element != null) {
@@ -391,8 +385,11 @@ class Attribute {
 
   initializeCollectionInTarget (target, value, options) {
     let collection
+    let listener = target.$didChange.bind(target, this.name)
+
     collection = this.createCollection()
-    collection.$setParent(target, this.name)
+    collection.$on({add: listener, remove: listener, update: listener})
+    collection.$setParent(target)
     target.$data[this.name] = collection
 
     this.maybeUpdateInTarget(target, value, options)

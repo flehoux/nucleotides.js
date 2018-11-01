@@ -550,6 +550,7 @@ function generateModel (name) {
       let changeset
       if (this[$$changed] != null) {
         let changedAttributeNames = this[$$changed]
+        delete this[$$changed]
         if (changedAttributeNames.size > 0 && !tx.constructing) {
           if (tx.initializing != null) {
             this.$difference.$setInitial(tx.initializing)
@@ -772,7 +773,7 @@ function generateModel (name) {
     $didChange (name) {
       this[$$changed].add(name)
       if (this.$collection != null) {
-        this.$collection.$didChange(this)
+        this.$collection.$emit('update', this)
       } else if (this.$parent) {
         this.$parent.$didChange(this[$$parentLocation])
       }
